@@ -24,6 +24,7 @@ dependencies:
 - http-client
 - http-client-tls
 - aeson
+- xlsx
 
 library:
   source-dirs: src

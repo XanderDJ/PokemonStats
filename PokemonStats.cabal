@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: cb82708cc57ba415006a72e4511d1479796477a042fe19c2f891c2a345971527
+-- hash: 69d0691e98cef66376da1def2151b920230381d5cedbec9f851a22f1c26bb879
 
 name:           PokemonStats
 version:        0.1.0.0
@@ -37,6 +37,7 @@ library
     , base >=4.7 && <5
     , http-client
     , http-client-tls
+    , xlsx
   default-language: Haskell2010
 
 executable PokemonStats-exe
@@ -52,6 +53,7 @@ executable PokemonStats-exe
     , base >=4.7 && <5
     , http-client
     , http-client-tls
+    , xlsx
   default-language: Haskell2010
 
 test-suite PokemonStats-test
@@ -68,4 +70,5 @@ test-suite PokemonStats-test
     , base >=4.7 && <5
     , http-client
     , http-client-tls
+    , xlsx
   default-language: Haskell2010

@@ -11,6 +11,8 @@ import Data.Aeson
 import Data.Aeson.Internal ()
 import Data.Aeson.Parser ()
 import Data.Maybe (fromJust)
+import Data.Ord ( Down(Down) )
+import Data.List ( sortBy )
 import Lib (someFunc)
 import Network.HTTP.Client
   ( Response (responseBody),
@@ -19,8 +21,9 @@ import Network.HTTP.Client
     parseRequest,
   )
 import Network.HTTP.Client.TLS (tlsManagerSettings)
-import System.Environment
+import System.Environment ( getArgs )
 import System.IO
+    ( hClose, openFile, hGetContents, IOMode(ReadMode) )
 
 main :: IO ()
 main = do
@@ -41,7 +44,8 @@ mainOneFile ([file]) = do
   contents <- hGetContents handle
   let pokemons' = words contents
   pokemons <- mapM getPokemon pokemons'
-  print pokemons
+  let pokemonSorted = sortOnSpeed pokemons
+  print pokemonSorted
   hClose handle
 
 mainTwoFiles :: [String] -> IO ()
@@ -199,5 +203,43 @@ getValue (SPDEF x) = x
 getValue (SPEED x) = x
 getValue _ = error "Tried to get the value of an empty Stat"
 
+getStat :: String -> Pokemon -> Stat
+getStat name pok
+  | name == "hp" = baseHpStat basestats
+  | name == "atk" = baseAtkStat basestats
+  | name == "def" = baseDefStat basestats
+  | name == "spatk" = baseSpatkStat basestats
+  | name == "spdef" = baseSpdefStat basestats
+  | name == "spd" = baseSpdStat basestats
+  | otherwise = error $ name ++ " isn't an abbreviation of a stat"
+  where
+    basestats = baseStats pok
+
+maxSpeed :: Pokemon -> Int
+maxSpeed = (maxStatAt 100 . getStat "spd")
+
+maxSpeedWithScarf :: Pokemon -> Int
+maxSpeedWithScarf = (*// 1.5) . fromIntegral . maxSpeed
+
 serious :: Nature
 serious = Nature "Serious" NEUTRAL NEUTRAL
+
+sortOnSpeed :: [Pokemon] -> [Pokemon]
+sortOnSpeed = sortBy (sortPokemon "spd")
+
+-- | Ordering is reversed to make it descending instead of ascending. Shown by the use of Down
+sortPokemon :: String -> Pokemon -> Pokemon ->  Ordering
+sortPokemon stat pok1 pok2 = compare (Down stat1) (Down stat2)
+  where
+    baseStat1 = getStat stat pok1
+    stat1 = getValue baseStat1
+    baseStat2 = getStat stat pok2
+    stat2 = getValue baseStat2
+
+-- | floored multiplication
+(*//) :: (RealFrac a,Num a, Integral b) => a -> a -> b
+(*//) a b = floor c
+  where
+    c = a * b
+    
+infixl 7 *//
