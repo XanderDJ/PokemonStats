@@ -2,6 +2,9 @@
 
 module Main where
 
+import Codec.Xlsx
+import Control.Lens hiding (Level)
+import Control.Lens.Type
 import Data.Aeson
   ( FromJSON (parseJSON),
     Value (Object),
@@ -10,9 +13,13 @@ import Data.Aeson
   )
 import Data.Aeson.Internal ()
 import Data.Aeson.Parser ()
+import qualified Data.ByteString.Lazy as L
+import Data.List (sortBy)
+import Data.Maybe
 import Data.Maybe (fromJust)
-import Data.Ord ( Down(Down) )
-import Data.List ( sortBy )
+import Data.Ord (Down (Down))
+import qualified Data.Text as T
+import Data.Time.Clock.POSIX
 import Lib (someFunc)
 import Network.HTTP.Client
   ( Response (responseBody),
@@ -21,12 +28,19 @@ import Network.HTTP.Client
     parseRequest,
   )
 import Network.HTTP.Client.TLS (tlsManagerSettings)
-import System.Environment ( getArgs )
+import System.Environment (getArgs)
 import System.IO
-    ( hClose, openFile, hGetContents, IOMode(ReadMode) )
+  ( IOMode (ReadMode),
+    hClose,
+    hGetContents,
+    openFile,
+  )
 
 main :: IO ()
-main = do
+main = pokemonStats
+
+pokemonStats :: IO ()
+pokemonStats = do
   args <- getArgs
   if length args == 0
     then error "A filepath to a list of pokemon is needed"
@@ -45,11 +59,31 @@ mainOneFile ([file]) = do
   let pokemons' = words contents
   pokemons <- mapM getPokemon pokemons'
   let pokemonSorted = sortOnSpeed pokemons
-  print pokemonSorted
+      sheet = fillSpeedSheet 1 pokemonSorted emptySheet
+      xl = def & atSheet "Speeds" ?~ sheet
+  ct <- getPOSIXTime
+  L.writeFile "speed.xlsx" $ fromXlsx ct xl
   hClose handle
 
 mainTwoFiles :: [String] -> IO ()
-mainTwoFiles args = undefined
+mainTwoFiles (file1 : file2 : []) = do
+  handle1 <- openFile file1 ReadMode
+  handle2 <- openFile file2 ReadMode
+  contents <- hGetContents handle1
+  contents2 <- hGetContents handle2
+  let pokemons' = words contents
+      pokemons'2 = words contents2
+  pokemons <- mapM getPokemon pokemons'
+  pokemons2 <- mapM getPokemon pokemons'2
+  let pokemonSorted = sortOnSpeed pokemons
+      pokemonSorted2 = sortOnSpeed pokemons2
+      sheet = fillSpeedSheet 1 pokemonSorted emptySheet
+      finalsheet = fillSpeedSheet 7 pokemonSorted2 sheet
+      xl = def & atSheet "Speeds" ?~ finalsheet
+  ct <- getPOSIXTime
+  L.writeFile "speeddifference.xlsx" $ fromXlsx ct xl
+  hClose handle1
+  hClose handle2
 
 getPokemon :: String -> IO Pokemon
 getPokemon pokemon = do
@@ -59,6 +93,42 @@ getPokemon pokemon = do
   let json = responseBody bs
       pokemon = (fromJust . decode) json
   return pokemon
+
+fillSpeedSheet :: Int -> [Pokemon] -> Worksheet -> Worksheet
+fillSpeedSheet col poks sheet = fillSpeedHeader col poks sheet
+
+fillSpeedHeader :: Int -> [Pokemon] -> Worksheet -> Worksheet
+fillSpeedHeader col poks sheet =
+  sheet
+    & cellValueAt (1, col) ?~ CellText "Name"
+    & cellValueAt (1, col + 1) ?~ CellText "Base speed"
+    & cellValueAt (1, col + 2) ?~ CellText "Min speed"
+    & cellValueAt (1, col + 3) ?~ CellText "Max speed"
+    & cellValueAt (1, col + 4) ?~ CellText "Max speed with scarf"
+    & fillSpeedRow 2 col poks
+
+fillSpeedRow :: Int -> Int -> [Pokemon] -> Worksheet -> Worksheet
+fillSpeedRow row col [pokemon] sheet =
+  sheet
+    & cellValueAt (row, col) ?~ CellText (T.pack (name pokemon))
+    & cellValueAt (row, col + 1) ?~ CellDouble (fromIntegral (getSpeed pokemon))
+    & cellValueAt (row, col + 2) ?~ CellDouble (fromIntegral (minStatAt 100 (getStat "spd" pokemon)))
+    & cellValueAt (row, col + 3) ?~ CellDouble (fromIntegral (maxSpeed pokemon))
+    & cellValueAt (row, col + 4) ?~ CellDouble (fromIntegral (maxSpeedWithScarf pokemon))
+fillSpeedRow row col (pokemon : poks) sheet =
+  sheet
+    & cellValueAt (row, col) ?~ CellText (T.pack (name pokemon))
+    & cellValueAt (row, col + 1) ?~ CellDouble (fromIntegral (getSpeed pokemon))
+    & cellValueAt (row, col + 2) ?~ CellDouble (fromIntegral (minStatAt 100 (getStat "spd" pokemon)))
+    & cellValueAt (row, col + 3) ?~ CellDouble (fromIntegral (maxSpeed pokemon))
+    & cellValueAt (row, col + 4) ?~ CellDouble (fromIntegral (maxSpeedWithScarf pokemon))
+    & fillSpeedRow (row + 1) col poks
+
+emptyXlsx :: Xlsx
+emptyXlsx = def
+
+emptySheet :: Worksheet
+emptySheet = def
 
 data Type
   = NORMAL
@@ -215,6 +285,9 @@ getStat name pok
   where
     basestats = baseStats pok
 
+getSpeed :: Pokemon -> Int
+getSpeed = getValue . getStat "spd"
+
 maxSpeed :: Pokemon -> Int
 maxSpeed = (maxStatAt 100 . getStat "spd")
 
@@ -228,7 +301,7 @@ sortOnSpeed :: [Pokemon] -> [Pokemon]
 sortOnSpeed = sortBy (sortPokemon "spd")
 
 -- | Ordering is reversed to make it descending instead of ascending. Shown by the use of Down
-sortPokemon :: String -> Pokemon -> Pokemon ->  Ordering
+sortPokemon :: String -> Pokemon -> Pokemon -> Ordering
 sortPokemon stat pok1 pok2 = compare (Down stat1) (Down stat2)
   where
     baseStat1 = getStat stat pok1
@@ -237,9 +310,7 @@ sortPokemon stat pok1 pok2 = compare (Down stat1) (Down stat2)
     stat2 = getValue baseStat2
 
 -- | floored multiplication
-(*//) :: (RealFrac a,Num a, Integral b) => a -> a -> b
-(*//) a b = floor c
-  where
-    c = a * b
-    
+(*//) :: (RealFrac a, Num a, Integral b) => a -> a -> b
+a *// b = floor (a * b)
+
 infixl 7 *//
