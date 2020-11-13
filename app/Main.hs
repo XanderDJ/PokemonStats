@@ -35,6 +35,7 @@ import System.IO
     hGetContents,
     openFile,
   )
+import Excel
 
 main :: IO ()
 main = pokemonStats
@@ -94,41 +95,21 @@ getPokemon pokemon = do
       pokemon = (fromJust . decode) json
   return pokemon
 
-fillSpeedSheet :: Int -> [Pokemon] -> Worksheet -> Worksheet
-fillSpeedSheet col poks sheet = fillSpeedHeader col poks sheet
+speedTable :: [Pokemon] -> ExcelTable
+speedTable poks = table
+ where
+   headers' = ["Name" , "Base speed", "Min speed", "No invest speed", "Max speed", "Max speed with scarf"]
+   contents' = map pokemonSpeedRow poks
+   table = ExcelTable headers' contents' HORIZONTAL
 
-fillSpeedHeader :: Int -> [Pokemon] -> Worksheet -> Worksheet
-fillSpeedHeader col poks sheet =
-  sheet
-    & cellValueAt (1, col) ?~ CellText "Name"
-    & cellValueAt (1, col + 1) ?~ CellText "Base speed"
-    & cellValueAt (1, col + 2) ?~ CellText "Min speed"
-    & cellValueAt (1, col + 3) ?~ CellText "Max speed"
-    & cellValueAt (1, col + 4) ?~ CellText "Max speed with scarf"
-    & fillSpeedRow 2 col poks
+pokemonSpeedRow :: Pokemon -> [CellValue]
+pokemonSpeedRow pok = row
+ where 
+   speed = getStat "spd" pok
+   pokName = T.pack $ name pok
+   row = [CellText pokName, (fromIntegral . getValue) speed, (fromIntegral . minStatAt 100) speed, (fromIntegral . noInvestStatAt 100) speed]
 
-fillSpeedRow :: Int -> Int -> [Pokemon] -> Worksheet -> Worksheet
-fillSpeedRow row col [pokemon] sheet =
-  sheet
-    & cellValueAt (row, col) ?~ CellText (T.pack (name pokemon))
-    & cellValueAt (row, col + 1) ?~ CellDouble (fromIntegral (getSpeed pokemon))
-    & cellValueAt (row, col + 2) ?~ CellDouble (fromIntegral (minStatAt 100 (getStat "spd" pokemon)))
-    & cellValueAt (row, col + 3) ?~ CellDouble (fromIntegral (maxSpeed pokemon))
-    & cellValueAt (row, col + 4) ?~ CellDouble (fromIntegral (maxSpeedWithScarf pokemon))
-fillSpeedRow row col (pokemon : poks) sheet =
-  sheet
-    & cellValueAt (row, col) ?~ CellText (T.pack (name pokemon))
-    & cellValueAt (row, col + 1) ?~ CellDouble (fromIntegral (getSpeed pokemon))
-    & cellValueAt (row, col + 2) ?~ CellDouble (fromIntegral (minStatAt 100 (getStat "spd" pokemon)))
-    & cellValueAt (row, col + 3) ?~ CellDouble (fromIntegral (maxSpeed pokemon))
-    & cellValueAt (row, col + 4) ?~ CellDouble (fromIntegral (maxSpeedWithScarf pokemon))
-    & fillSpeedRow (row + 1) col poks
 
-emptyXlsx :: Xlsx
-emptyXlsx = def
-
-emptySheet :: Worksheet
-emptySheet = def
 
 data Type
   = NORMAL
@@ -255,6 +236,10 @@ instance FromJSON Pokemon where
     let baseStats = getBaseStats stats
         typing = getTyping types
     return $ Pokemon name baseStats typing
+
+noInvestStatAt :: Level -> Stat -> Int
+noInvestStatAt lvl (HP value) = ((31 + 2 * value + (div 0 4)) * (div lvl 100)) + 10 + lvl
+noInvestStatAt lvl stat = div (((31 + 2 * (getValue stat) + (div 0 4)) * (div lvl 100) + 5) * 9) 10
 
 minStatAt :: Level -> Stat -> Int
 minStatAt lvl (HP value) = ((2 * value + (div 0 4)) * (div lvl 100)) + 10 + lvl
