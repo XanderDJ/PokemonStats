@@ -4,7 +4,6 @@ module Main where
 
 import Codec.Xlsx
 import Control.Lens hiding (Level)
-import Control.Lens.Type
 import Data.Aeson
   ( FromJSON (parseJSON),
     Value (Object),
@@ -15,12 +14,11 @@ import Data.Aeson.Internal ()
 import Data.Aeson.Parser ()
 import qualified Data.ByteString.Lazy as L
 import Data.List (sortBy)
-import Data.Maybe
+import Data.List.Split
 import Data.Maybe (fromJust)
 import Data.Ord (Down (Down))
 import qualified Data.Text as T
 import Data.Time.Clock.POSIX
-import Lib (someFunc)
 import Network.HTTP.Client
   ( Response (responseBody),
     httpLbs,
@@ -79,10 +77,13 @@ mainTwoFiles (file1 : file2 : []) = do
   let pokemonSorted = sortOnSpeed pokemons
       pokemonSorted2 = sortOnSpeed pokemons2
       sheet = fillSpeedSheet 1 pokemonSorted emptySheet
-      finalsheet = fillSpeedSheet 7 pokemonSorted2 sheet
+      finalsheet = fillSpeedSheet 8 pokemonSorted2 sheet
       xl = def & atSheet "Speeds" ?~ finalsheet
   ct <- getPOSIXTime
-  L.writeFile "speeddifference.xlsx" $ fromXlsx ct xl
+  let team1 = getTeamName file1
+      team2 = getTeamName file2
+      fileName = team1 ++ "vs" ++ team2 ++ ".xlsx"
+  L.writeFile fileName $ fromXlsx ct xl
   hClose handle1
   hClose handle2
 
@@ -242,12 +243,16 @@ noInvestStatAt lvl (HP value) = ((31 + 2 * value + (div 0 4)) * (div lvl 100)) +
 noInvestStatAt lvl stat = div (((31 + 2 * (getValue stat) + (div 0 4)) * (div lvl 100) + 5) * 9) 10
 
 minStatAt :: Level -> Stat -> Int
-minStatAt lvl (HP value) = ((2 * value + (div 0 4)) * (div lvl 100)) + 10 + lvl
-minStatAt lvl stat = div (((2 * (getValue stat) + (div 0 4)) * (div lvl 100) + 5) * 9) 10
+minStatAt lvl (HP value) = ((2 * value) * div lvl 100) + 10 + lvl
+minStatAt lvl stat = div (((2 * getValue stat) * div lvl 100 + 5) * 9) 10
+
+noInvestStatAt :: Level -> Stat -> Int
+noInvestStatAt lvl (HP value) = ((31 + 2 * value) * div lvl 100) + 10 + lvl
+noInvestStatAt lvl stat = (31 + 2 * getValue stat) * div lvl 100 + 5
 
 maxStatAt :: Level -> Stat -> Int
-maxStatAt lvl (HP value) = ((31 + 2 * value + (div 252 4)) * (div lvl 100)) + 10 + lvl
-maxStatAt lvl stat = div (((31 + 2 * (getValue stat) + (div 252 4)) * (div lvl 100) + 5) * 11) 10
+maxStatAt lvl (HP value) = ((31 + 2 * value + iv 252 4) * div lvl 100) + 10 + lvl
+maxStatAt lvl stat = div (((31 + 2 * getValue stat + div 252 4) * div lvl 100 + 5) * 11) 10
 
 getValue :: Stat -> Int
 getValue (HP x) = x
@@ -293,6 +298,9 @@ sortPokemon stat pok1 pok2 = compare (Down stat1) (Down stat2)
     stat1 = getValue baseStat1
     baseStat2 = getStat stat pok2
     stat2 = getValue baseStat2
+
+getTeamName :: FilePath -> String
+getTeamName = (head . splitOn "." . head . reverse . splitWhen (\x -> x == '\\' || x == '/'))
 
 -- | floored multiplication
 (*//) :: (RealFrac a, Num a, Integral b) => a -> a -> b
