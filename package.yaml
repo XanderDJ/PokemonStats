@@ -29,6 +29,7 @@ dependencies:
 - text
 - bytestring
 - time
+- split
 
 library:
   source-dirs: src
