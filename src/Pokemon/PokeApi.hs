@@ -41,7 +41,7 @@ getDt name = do
       let allUrls = tryAllBases name
           allRequests = map4 parseRequest_ allUrls
       manager <- newManager settings
-      responses <- mapM4 (\req -> httpLbs req manager) allRequests
+      responses <- mapM4 ( `httpLbs` manager) allRequests
       let bodies = map4 responseBody responses
           dts = fromBS4 bodies
           dt = getDts dts
