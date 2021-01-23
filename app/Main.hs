@@ -3,7 +3,12 @@
 module Main where
 
 import Codec.Xlsx
-import Control.Lens hiding (Level)
+  ( CellValue (CellDouble, CellText),
+    atSheet,
+    def,
+    fromXlsx,
+  )
+import Control.Lens ((&), (?~))
 import Data.Aeson
   ( FromJSON (parseJSON),
     Value (Object),
@@ -14,11 +19,17 @@ import Data.Aeson.Internal ()
 import Data.Aeson.Parser ()
 import qualified Data.ByteString.Lazy as L
 import Data.List (sortBy)
-import Data.List.Split
+import Data.List.Split (splitOn, splitWhen)
 import Data.Maybe (fromJust)
 import Data.Ord (Down (Down))
 import qualified Data.Text as T
-import Data.Time.Clock.POSIX
+import Data.Time.Clock.POSIX (getPOSIXTime)
+import Excel
+  ( ExcelTable (ExcelTable),
+    TableMode (HORIZONTAL),
+    emptySheet,
+    insertTable,
+  )
 import Network.HTTP.Client
   ( Response (responseBody),
     httpLbs,
@@ -33,7 +44,6 @@ import System.IO
     hGetContents,
     openFile,
   )
-import Excel
 
 main :: IO ()
 main = pokemonStats
@@ -41,7 +51,7 @@ main = pokemonStats
 pokemonStats :: IO ()
 pokemonStats = do
   args <- getArgs
-  if length args == 0
+  if null args
     then error "A filepath to a list of pokemon is needed"
     else
       if length args == 1
@@ -52,20 +62,21 @@ pokemonStats = do
             else error "only up to 2 files allowed"
 
 mainOneFile :: [String] -> IO ()
-mainOneFile ([file]) = do
+mainOneFile [file] = do
   handle <- openFile file ReadMode
   contents <- hGetContents handle
   let pokemons' = words contents
   pokemons <- mapM getPokemon pokemons'
   let pokemonSorted = sortOnSpeed pokemons
-      sheet = fillSpeedSheet 1 pokemonSorted emptySheet
+      table' = speedTable pokemonSorted
+      sheet = insertTable "A1" table' emptySheet
       xl = def & atSheet "Speeds" ?~ sheet
   ct <- getPOSIXTime
   L.writeFile "speed.xlsx" $ fromXlsx ct xl
   hClose handle
 
 mainTwoFiles :: [String] -> IO ()
-mainTwoFiles (file1 : file2 : []) = do
+mainTwoFiles [file1, file2] = do
   handle1 <- openFile file1 ReadMode
   handle2 <- openFile file2 ReadMode
   contents <- hGetContents handle1
@@ -76,9 +87,10 @@ mainTwoFiles (file1 : file2 : []) = do
   pokemons2 <- mapM getPokemon pokemons'2
   let pokemonSorted = sortOnSpeed pokemons
       pokemonSorted2 = sortOnSpeed pokemons2
-      sheet = fillSpeedSheet 1 pokemonSorted emptySheet
-      finalsheet = fillSpeedSheet 8 pokemonSorted2 sheet
-      xl = def & atSheet "Speeds" ?~ finalsheet
+      table1 = speedTable pokemonSorted
+      table2 = speedTable pokemonSorted2
+      sheet = (insertTable "I1" table2 . insertTable "A1" table1) emptySheet
+      xl = def & atSheet "Speeds" ?~ sheet
   ct <- getPOSIXTime
   let team1 = getTeamName file1
       team2 = getTeamName file2
@@ -98,19 +110,24 @@ getPokemon pokemon = do
 
 speedTable :: [Pokemon] -> ExcelTable
 speedTable poks = table
- where
-   headers' = ["Name" , "Base speed", "Min speed", "No invest speed", "Max speed", "Max speed with scarf"]
-   contents' = map pokemonSpeedRow poks
-   table = ExcelTable headers' contents' HORIZONTAL
+  where
+    headers' = [CellText "Name", CellText "Base speed", CellText "Min speed", CellText "No invest speed", CellText "Max speed", CellText "Max speed with scarf"]
+    contents' = map pokemonSpeedRow poks
+    table = ExcelTable headers' contents' HORIZONTAL
 
 pokemonSpeedRow :: Pokemon -> [CellValue]
 pokemonSpeedRow pok = row
- where 
-   speed = getStat "spd" pok
-   pokName = T.pack $ name pok
-   row = [CellText pokName, (fromIntegral . getValue) speed, (fromIntegral . minStatAt 100) speed, (fromIntegral . noInvestStatAt 100) speed]
-
-
+  where
+    speed = getStat "spd" pok
+    pokName = T.pack $ name pok
+    row =
+      [ CellText pokName,
+        (CellDouble . fromIntegral . getValue) speed,
+        (CellDouble . fromIntegral . minStatAt 100) speed,
+        (CellDouble . fromIntegral . noInvestStatAt 100) speed,
+        (CellDouble . fromIntegral . maxSpeed) pok,
+        (CellDouble . fromIntegral . maxSpeedWithScarf) pok
+      ]
 
 data Type
   = NORMAL
@@ -193,10 +210,10 @@ mkStat name value
   | otherwise = NEUTRAL
 
 getBaseStats :: [Stat] -> BaseStats
-getBaseStats (hp : atk : def : spatk : spdef : spd : []) = BaseStats hp atk def spatk spdef spd
+getBaseStats [hp, atk, def, spatk, spdef, spd] = BaseStats hp atk def spatk spdef spd
 
 getTyping :: [String] -> Typing
-getTyping strs = map stringToType strs
+getTyping = map stringToType
 
 stringToType :: String -> Type
 stringToType str
@@ -232,27 +249,23 @@ instance FromJSON Pokemon where
     name <- jsn .: "name"
     stats <- jsn .: "stats"
     objs <- jsn .: "types"
-    typesObjs <- mapM (\obj -> obj .: "type") objs
-    types <- mapM (\obj -> obj .: "name") typesObjs
+    typesObjs <- mapM (.: "type") objs
+    types <- mapM (.: "name") typesObjs
     let baseStats = getBaseStats stats
         typing = getTyping types
     return $ Pokemon name baseStats typing
 
-noInvestStatAt :: Level -> Stat -> Int
-noInvestStatAt lvl (HP value) = ((31 + 2 * value + (div 0 4)) * (div lvl 100)) + 10 + lvl
-noInvestStatAt lvl stat = div (((31 + 2 * (getValue stat) + (div 0 4)) * (div lvl 100) + 5) * 9) 10
-
 minStatAt :: Level -> Stat -> Int
 minStatAt lvl (HP value) = ((2 * value) * div lvl 100) + 10 + lvl
-minStatAt lvl stat = div (((2 * getValue stat) * div lvl 100 + 5) * 9) 10
+minStatAt lvl stat = fromIntegral ((2 * getValue stat) * div lvl 100 + 5) *// 0.9
 
 noInvestStatAt :: Level -> Stat -> Int
 noInvestStatAt lvl (HP value) = ((31 + 2 * value) * div lvl 100) + 10 + lvl
 noInvestStatAt lvl stat = (31 + 2 * getValue stat) * div lvl 100 + 5
 
 maxStatAt :: Level -> Stat -> Int
-maxStatAt lvl (HP value) = ((31 + 2 * value + iv 252 4) * div lvl 100) + 10 + lvl
-maxStatAt lvl stat = div (((31 + 2 * getValue stat + div 252 4) * div lvl 100 + 5) * 11) 10
+maxStatAt lvl (HP value) = ((31 + 2 * value + div 252 4) * div lvl 100) + 10 + lvl
+maxStatAt lvl stat = fromIntegral ((31 + 2 * getValue stat + div 252 4) * div lvl 100 + 5) *// 1.1
 
 getValue :: Stat -> Int
 getValue (HP x) = x
@@ -279,7 +292,7 @@ getSpeed :: Pokemon -> Int
 getSpeed = getValue . getStat "spd"
 
 maxSpeed :: Pokemon -> Int
-maxSpeed = (maxStatAt 100 . getStat "spd")
+maxSpeed = maxStatAt 100 . getStat "spd"
 
 maxSpeedWithScarf :: Pokemon -> Int
 maxSpeedWithScarf = (*// 1.5) . fromIntegral . maxSpeed
@@ -300,7 +313,7 @@ sortPokemon stat pok1 pok2 = compare (Down stat1) (Down stat2)
     stat2 = getValue baseStat2
 
 getTeamName :: FilePath -> String
-getTeamName = (head . splitOn "." . head . reverse . splitWhen (\x -> x == '\\' || x == '/'))
+getTeamName = head . splitOn "." . last . splitWhen (\x -> x == '\\' || x == '/')
 
 -- | floored multiplication
 (*//) :: (RealFrac a, Num a, Integral b) => a -> a -> b

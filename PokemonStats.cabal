@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: eec29f0c98b17fa56e553bd4a638771f020529218c2af6648c8bb9db5a0025b4
+-- hash: 4ae0bf76995a56a34a670d691c6d45da1cec4bf55036c209b00492a976124ed9
 
 name:           PokemonStats
 version:        0.1.0.0
@@ -29,6 +29,10 @@ library
   exposed-modules:
       Excel
       Lib
+      Pokemon.DataTypes
+      Pokemon.Nature
+      Pokemon.PokeApi
+      Pokemon.Utility
   other-modules:
       Paths_PokemonStats
   hs-source-dirs:
@@ -37,9 +41,11 @@ library
       aeson
     , base >=4.7 && <5
     , bytestring
+    , containers
     , http-client
     , http-client-tls
     , lens
+    , split
     , text
     , time
     , xlsx
@@ -57,9 +63,11 @@ executable PokemonStats-exe
     , aeson
     , base >=4.7 && <5
     , bytestring
+    , containers
     , http-client
     , http-client-tls
     , lens
+    , split
     , text
     , time
     , xlsx
@@ -78,9 +86,11 @@ test-suite PokemonStats-test
     , aeson
     , base >=4.7 && <5
     , bytestring
+    , containers
     , http-client
     , http-client-tls
     , lens
+    , split
     , text
     , time
     , xlsx
