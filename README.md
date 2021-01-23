@@ -10,6 +10,7 @@ This project needs to be changed into a discord bot that allows the use of dt co
 for example:
 
 (prefix)prepare
+
 team1:
 - mienshao
 - toxtricity
