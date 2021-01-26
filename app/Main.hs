@@ -20,7 +20,7 @@ import Data.Aeson.Parser ()
 import qualified Data.ByteString.Lazy as L
 import Data.List (sortBy)
 import Data.List.Split (splitOn, splitWhen)
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, isJust)
 import qualified Data.Text as T
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Excel
@@ -69,7 +69,7 @@ mainOneFile [file] = do
   handle <- openFile file ReadMode
   contents <- hGetContents handle
   let pokemons' = words contents
-  pokemons <- mapM getPokemon pokemons'
+  pokemons <- getPokemons pokemons'
   let pokemonSorted = sortOnSpeed pokemons
       table' = speedTable pokemonSorted
       sheet = insertTable "A1" table' emptySheet
@@ -86,8 +86,8 @@ mainTwoFiles [file1, file2] = do
   contents2 <- hGetContents handle2
   let pokemons' = words contents
       pokemons'2 = words contents2
-  pokemons <- mapM getPokemon pokemons'
-  pokemons2 <- mapM getPokemon pokemons'2
+  pokemons <- getPokemons pokemons'
+  pokemons2 <- getPokemons pokemons'2
   let pokemonSorted = sortOnSpeed pokemons
       pokemonSorted2 = sortOnSpeed pokemons2
       table1 = speedTable pokemonSorted
@@ -101,6 +101,20 @@ mainTwoFiles [file1, file2] = do
   L.writeFile fileName $ fromXlsx ct xl
   hClose handle1
   hClose handle2
+
+getPokemons :: [String] -> IO [Pokemon]
+getPokemons [] = return []
+getPokemons (pokemon:pokemons) = do
+  pokemon' <- getPokemon pokemon
+  if isJust pokemon'
+    then do
+      let pokemon'' = fromJust pokemon'
+      pokemons' <- getPokemons pokemons
+      return $ pokemon'' : pokemons'
+    else
+      error $ "Couldn't find pokemon: " ++ pokemon
+  
+
 
 speedTable :: [Pokemon] -> ExcelTable
 speedTable poks = table

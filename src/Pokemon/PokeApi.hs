@@ -16,12 +16,13 @@ import Data.Maybe (fromJust, isJust)
 import qualified Data.Text as T
 import Network.HTTP.Client
   ( ManagerSettings,
-    Response (responseBody),
+    Response (responseBody, responseStatus),
     httpLbs,
     newManager,
     parseRequest_,
   )
 import Network.HTTP.Client.TLS (tlsManagerSettings)
+import Network.HTTP.Types.Status ( status404 )
 import Pokemon.DataTypes
   ( Ability (..),
     BaseStat (..),
@@ -30,7 +31,7 @@ import Pokemon.DataTypes
     Move (Move),
     Pokemon (Pokemon),
   )
-import Pokemon.Functions ( getStat )
+import Pokemon.Functions (getStat)
 import Pokemon.Nature (getNature)
 
 -- | Manager settings for tls connections
@@ -38,12 +39,12 @@ settings :: ManagerSettings
 settings = tlsManagerSettings
 
 -- | Implement the /dt command from showdown with pokéapi. Should use DTCache in the future to store looked up items in a cache
-getDt :: String -> IO DTType
+getDt :: String -> IO (Maybe DTType)
 getDt name = do
   let name' = (intercalate "-" . words) name
       nature = getNature name'
   if isJust nature
-    then return $ DtNature (fromJust nature)
+    then return $ Just $ DtNature (fromJust nature)
     else do
       let allUrls = tryAllBases name
           allRequests = map4 parseRequest_ allUrls
@@ -52,39 +53,42 @@ getDt name = do
       let bodies = map4 responseBody responses
           dts = fromBS4 bodies
           dt = getDts dts
-      return dt
+      return $ Just dt
 
 -- | Get a pokemon from pokéapi, TODO: Handle errors
-getPokemon :: String -> IO Pokemon
+getPokemon :: String -> IO (Maybe Pokemon)
 getPokemon name = do
   let base = pokemonBase ++ name
-  manager <- newManager settings
-  response <- httpLbs (parseRequest_ base) manager
-  return $ fromJust $ decode (responseBody response)
+  getResponse name base
 
 -- | Get an ability from pokéapi, TODO: Handle errors
-getAbility :: String -> IO Ability
+getAbility :: String -> IO (Maybe Ability)
 getAbility name = do
   let base = abilityBase ++ name
-  manager <- newManager settings
-  response <- httpLbs (parseRequest_ base) manager
-  return $ fromJust $ decode (responseBody response)
+  getResponse name base
 
 -- | Get an item from pokéapi, TODO: Handle errors
-getItem :: String -> IO Item
+getItem :: String -> IO (Maybe Item)
 getItem name = do
   let base = itemBase ++ name
-  manager <- newManager settings
-  response <- httpLbs (parseRequest_ base) manager
-  return $ fromJust $ decode (responseBody response)
+  getResponse name base
 
 -- | Get a move from pokéapi. TODO: Handle errors
-getMove :: String -> IO Move
+getMove :: String -> IO (Maybe Move)
 getMove name = do
   let base = moveBase ++ name
+  getResponse name base
+
+getResponse :: FromJSON a => String -> String -> IO (Maybe a)
+getResponse obj base = do 
   manager <- newManager settings
-  response <- httpLbs (parseRequest_ base) manager
-  return $ fromJust $ decode (responseBody response)
+  response <- httpLbs (parseRequest_ base) manager 
+  if checkFound response 
+    then return $ decode (responseBody response)
+    else return $ Nothing 
+
+checkFound :: Response ByteString -> Bool
+checkFound resp = status404 /= responseStatus resp 
 
 -- | Api base for pokéapi, make sure this remains up to date
 apiBase :: String
@@ -173,7 +177,7 @@ data EffectEntry = EffectEntry
     eDescription :: String
   }
 
-data Effect = Effect (Maybe Int) String
+data Effect = Effect (Maybe Int) (Maybe String)
 
 instance FromJSON EffectEntry where
   parseJSON (Object jsn) = EffectEntry <$> ((jsn .: "language") >>= (.: "name")) <*> (jsn .: "effect")
@@ -182,15 +186,17 @@ instance FromJSON Ability where
   parseJSON (Object jsn) = do
     name <- jsn .: "name"
     effects <- jsn .: "effect_entries"
-    let effect = (head . filter (\(EffectEntry lang _) -> lang == "en")) effects
-    return $ Ability name (eDescription effect)
+    let effects' = filter (\(EffectEntry lang _) -> lang == "en") effects
+        effect' = if (not . null) effects then (Just . eDescription . head) effects' else Nothing
+    return $ Ability name effect'
 
 instance FromJSON Item where
   parseJSON (Object jsn) = do
     name <- jsn .: "name"
     effects <- jsn .: "effect_entries"
-    let effect = (head . filter (\(EffectEntry lang _) -> lang == "en")) effects
-    return $ Item name (eDescription effect)
+    let effects' = filter (\(EffectEntry lang _) -> lang == "en") effects
+        effect' = if (not . null) effects then (Just . eDescription . head) effects' else Nothing
+    return $ Item name effect'
 
 instance FromJSON Move where
   parseJSON (Object jsn) = do
@@ -203,15 +209,16 @@ instance FromJSON Move where
     chance <- jsn .:? "effect_chance"
     typesObj <- jsn .: "type"
     tipe <- typesObj .: "name"
-    let effect = (head . filter (\(EffectEntry lang _) -> lang == "en")) effects
-        description = eDescription effect
+    let effects' = filter (\(EffectEntry lang _) -> lang == "en") effects
+        effect' = if (not . null) effects then (Just . eDescription . head) effects' else Nothing
         typing = [read tipe]
-        effect' = Effect chance description
-    return $ Move name typing dClass power acc (getCompleteDescription effect')
+        effect'' = Effect chance effect'
+    return $ Move name typing dClass power acc (getCompleteDescription effect'')
 
-getCompleteDescription :: Effect -> String
-getCompleteDescription (Effect Nothing desc) = desc
-getCompleteDescription (Effect (Just x) desc) = newDesc
+getCompleteDescription :: Effect -> Maybe String
+getCompleteDescription (Effect _ Nothing) = Nothing 
+getCompleteDescription (Effect Nothing (Just desc)) = Just desc
+getCompleteDescription (Effect (Just x) (Just desc)) = Just newDesc
   where
     valueText = T.pack $ show x
     tDesc = T.pack desc

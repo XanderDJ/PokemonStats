@@ -21,16 +21,18 @@ type Name = String
 type Description = String
 
 -- | Ability contains the name of the ability and it's description
-data Ability = Ability Name Description
+data Ability = Ability Name (Maybe Description)
 
 instance Show Ability where
-  show (Ability name description) = name ++ ": " ++ description
+  show (Ability name (Just description)) = name ++ ": " ++ description
+  show (Ability name _) = name ++ ": no description yet in the api."
 
 -- | Item contains the name of an item and it's description
-data Item = Item Name Description
+data Item = Item Name (Maybe Description)
 
 instance Show Item where
-  show (Item name description) = name ++ ": " ++ description
+  show (Item name (Just description)) = name ++ ": " ++ description
+  show (Item name _) = name ++ ": no description yet in the api."
 
 -- | Data type representing a move, dClass is either physical or special, bp can be battle power, accuracy is only applicable to moves that have accuracy
 data Move = Move
@@ -39,18 +41,19 @@ data Move = Move
     dClass :: String,
     bp :: Maybe Int,
     accuracy :: Maybe Int,
-    description :: Description
-  } deriving Show
+    description :: Maybe Description
+  }
+  deriving (Show)
 
 -- | Nature datatype, contains the name of the nature, the positive stat increase and then the negative. If the stats are neutral then there is no change.
 data Nature = Nature String Stat Stat
 
 instance Show Nature where
-    show (Nature name NEUTRAL NEUTRAL) = name ++ ": No effects on stats"
-    show (Nature name positive negative) = name ++ ": 10 % increase for " ++ show positive ++ " and 10% decrease for " ++ show negative 
+  show (Nature name NEUTRAL NEUTRAL) = name ++ ": No effects on stats"
+  show (Nature name positive negative) = name ++ ": 10 % increase for " ++ show positive ++ " and 10% decrease for " ++ show negative
 
 -- | All different stats for a pokemon
-data Stat = HP | ATK | DEF | SPATK | SPDEF | SPEED | NEUTRAL deriving Eq
+data Stat = HP | ATK | DEF | SPATK | SPDEF | SPEED | NEUTRAL deriving (Eq)
 
 instance Show Stat where
   show HP = "hp"
@@ -95,24 +98,24 @@ data Type
 -- | Make read be able to parse strings into types, "normal" -> NORMAL
 instance Read Type where
   readsPrec _ input = case map toLower input of
-    'n':'o':'r':'m':'a':'l':rest -> [(NORMAL, rest)]
-    'f':'i':'g':'h':'t':'i':'n':'g':rest -> [(FIGHTING, rest)]
-    'f':'l':'y':'i':'n':'g':rest -> [(FLYING, rest)]
-    'p':'o':'i':'s':'o':'n':rest -> [(POISON, rest)]
-    'g':'r':'o':'u':'n':'d':rest -> [(GROUND, rest)]
-    'r':'o':'c':'k':rest -> [(ROCK, rest)]
-    'b':'u':'g':rest -> [(BUG, rest)]
-    'g':'h':'o':'s':'t':rest -> [(GHOST, rest)]
-    's':'t':'e':'e':'l':rest -> [(STEEL, rest)]
-    'f':'i':'r':'e':rest -> [(FIRE, rest)]
-    'w':'a':'t':'e':'r':rest -> [(WATER, rest)]
-    'g':'r':'a':'s':'s':rest -> [(GRASS, rest)]
-    'e':'l':'e':'c':'t':'r':'i':'c':rest -> [(ELECTRIC, rest)]
-    'p':'s':'y':'c':'h':'i':'c':rest -> [(PSYCHIC, rest)]
-    'i':'c':'e':rest -> [(ICE, rest)]
-    'd':'r':'a':'g':'o':'n':rest -> [(DRAGON, rest)]
-    'd':'a':'r':'k':rest -> [(DARK, rest)]
-    'f':'a':'i':'r':'y':rest -> [(FAIRY, rest)]
+    'n' : 'o' : 'r' : 'm' : 'a' : 'l' : rest -> [(NORMAL, rest)]
+    'f' : 'i' : 'g' : 'h' : 't' : 'i' : 'n' : 'g' : rest -> [(FIGHTING, rest)]
+    'f' : 'l' : 'y' : 'i' : 'n' : 'g' : rest -> [(FLYING, rest)]
+    'p' : 'o' : 'i' : 's' : 'o' : 'n' : rest -> [(POISON, rest)]
+    'g' : 'r' : 'o' : 'u' : 'n' : 'd' : rest -> [(GROUND, rest)]
+    'r' : 'o' : 'c' : 'k' : rest -> [(ROCK, rest)]
+    'b' : 'u' : 'g' : rest -> [(BUG, rest)]
+    'g' : 'h' : 'o' : 's' : 't' : rest -> [(GHOST, rest)]
+    's' : 't' : 'e' : 'e' : 'l' : rest -> [(STEEL, rest)]
+    'f' : 'i' : 'r' : 'e' : rest -> [(FIRE, rest)]
+    'w' : 'a' : 't' : 'e' : 'r' : rest -> [(WATER, rest)]
+    'g' : 'r' : 'a' : 's' : 's' : rest -> [(GRASS, rest)]
+    'e' : 'l' : 'e' : 'c' : 't' : 'r' : 'i' : 'c' : rest -> [(ELECTRIC, rest)]
+    'p' : 's' : 'y' : 'c' : 'h' : 'i' : 'c' : rest -> [(PSYCHIC, rest)]
+    'i' : 'c' : 'e' : rest -> [(ICE, rest)]
+    'd' : 'r' : 'a' : 'g' : 'o' : 'n' : rest -> [(DRAGON, rest)]
+    'd' : 'a' : 'r' : 'k' : rest -> [(DARK, rest)]
+    'f' : 'a' : 'i' : 'r' : 'y' : rest -> [(FAIRY, rest)]
     _ -> []
 
 -- | Pokemon represented from pokemon api
@@ -124,7 +127,8 @@ data Pokemon = Pokemon
     hiddenAbilities :: Maybe Name,
     baseStats :: BaseStats,
     weight :: Int
-  } deriving Show
+  }
+  deriving (Show)
 
 -- | Level of a pokemon 0 - 100
 type Level = Int

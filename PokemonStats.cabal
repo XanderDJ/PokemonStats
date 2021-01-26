@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: d2fb6b786783cd64ddfb8b4472415261edc6cfd2df560512bef6b3ff8eb5a5a6
+-- hash: 34eaf15dd0948b1d5446bc73632fe22fbd735734e280844e46946361b5f81705
 
 name:           PokemonStats
 version:        0.1.0.0
@@ -43,6 +43,7 @@ library
     , containers
     , http-client
     , http-client-tls
+    , http-types
     , lens
     , split
     , text
@@ -65,6 +66,7 @@ executable PokemonStats-exe
     , containers
     , http-client
     , http-client-tls
+    , http-types
     , lens
     , split
     , text
@@ -88,6 +90,7 @@ test-suite PokemonStats-test
     , containers
     , http-client
     , http-client-tls
+    , http-types
     , lens
     , split
     , text
