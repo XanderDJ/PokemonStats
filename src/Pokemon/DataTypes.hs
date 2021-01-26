@@ -50,7 +50,7 @@ instance Show Nature where
     show (Nature name positive negative) = name ++ ": 10 % increase for " ++ show positive ++ " and 10% decrease for " ++ show negative 
 
 -- | All different stats for a pokemon
-data Stat = HP | ATK | DEF | SPATK | SPDEF | SPEED | NEUTRAL
+data Stat = HP | ATK | DEF | SPATK | SPDEF | SPEED | NEUTRAL deriving Eq
 
 instance Show Stat where
   show HP = "hp"
@@ -61,8 +61,8 @@ instance Show Stat where
   show SPEED = "speed"
   show NEUTRAL = "neutral"
 
--- | Data type for a pokemon stat it the stat it represents and the value of that stat
-data BaseStat = BaseStat Stat Int deriving (Show)
+-- | Data type for a pokemon stat, the stat it represents and the value of that stat
+data BaseStat = BaseStat Stat Int deriving (Show, Eq)
 
 -- | List of base stats
 type BaseStats = [BaseStat]
@@ -90,7 +90,7 @@ data Type
   | DRAGON
   | DARK
   | FAIRY
-  deriving (Show)
+  deriving (Show, Eq)
 
 -- | Make read be able to parse strings into types, "normal" -> NORMAL
 instance Read Type where
@@ -126,11 +126,5 @@ data Pokemon = Pokemon
     weight :: Int
   } deriving Show
 
--- | Changes string representing stat into Stat type
-getStat :: String -> Stat
-getStat "hp" = HP
-getStat "attack" = ATK
-getStat "defense" = DEF
-getStat "special-attack" = SPATK
-getStat "special-defense" = SPDEF
-getStat "speed" = SPEED
+-- | Level of a pokemon 0 - 100
+type Level = Int

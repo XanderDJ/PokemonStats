@@ -4,27 +4,34 @@
 module Pokemon.PokeApi where
 
 import Data.Aeson
-    ( decode, (.:), (.:?), FromJSON(parseJSON), Value(Object) )
+  ( FromJSON (parseJSON),
+    Value (Object),
+    decode,
+    (.:),
+    (.:?),
+  )
 import Data.ByteString.Lazy (ByteString)
-import Data.List ( intercalate )
-import Data.Maybe ( fromJust, isJust )
+import Data.List (intercalate)
+import Data.Maybe (fromJust, isJust)
 import qualified Data.Text as T
 import Network.HTTP.Client
-    ( ManagerSettings,
-      httpLbs,
-      newManager,
-      parseRequest_,
-      Response(responseBody) )
-import Network.HTTP.Client.TLS ( tlsManagerSettings )
+  ( ManagerSettings,
+    Response (responseBody),
+    httpLbs,
+    newManager,
+    parseRequest_,
+  )
+import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Pokemon.DataTypes
-    ( Pokemon(Pokemon),
-      BaseStat(..),
-      Move(Move),
-      Item(..),
-      Ability(..),
-      DTType(..),
-      getStat )
-import Pokemon.Nature ( getNature )
+  ( Ability (..),
+    BaseStat (..),
+    DTType (..),
+    Item (..),
+    Move (Move),
+    Pokemon (Pokemon),
+  )
+import Pokemon.Functions ( getStat )
+import Pokemon.Nature (getNature)
 
 -- | Manager settings for tls connections
 settings :: ManagerSettings
@@ -41,12 +48,11 @@ getDt name = do
       let allUrls = tryAllBases name
           allRequests = map4 parseRequest_ allUrls
       manager <- newManager settings
-      responses <- mapM4 ( `httpLbs` manager) allRequests
+      responses <- mapM4 (`httpLbs` manager) allRequests
       let bodies = map4 responseBody responses
           dts = fromBS4 bodies
           dt = getDts dts
       return dt
-
 
 -- | Get a pokemon from pokéapi, TODO: Handle errors
 getPokemon :: String -> IO Pokemon
@@ -104,6 +110,7 @@ tryAllBases :: String -> (String, String, String, String)
 tryAllBases name =
   let name' = (intercalate "-" . words) name
    in map4 (++ name') allBases
+
 -- | Map over a 4 tuple
 map4 :: (t -> d) -> (t, t, t, t) -> (d, d, d, d)
 map4 f (a, b, c, d) = (f a, f b, f c, f d)
