@@ -36,6 +36,17 @@ import Network.HTTP.Client
     parseRequest,
   )
 import Network.HTTP.Client.TLS (tlsManagerSettings)
+import Pokemon.DataTypes (Pokemon (pName))
+import Pokemon.Functions
+  ( getBaseStat,
+    getValue,
+    maxSpeed,
+    maxSpeedWithScarf,
+    minStatAt,
+    noInvestStatAt,
+    sortOnSpeed,
+  )
+import Pokemon.PokeApi (getPokemon)
 import System.Environment (getArgs)
 import System.IO
   ( IOMode (ReadMode),
@@ -43,10 +54,6 @@ import System.IO
     hGetContents,
     openFile,
   )
-
-import Pokemon.DataTypes
-import Pokemon.Functions
-import Pokemon.PokeApi
 
 main :: IO ()
 main = pokemonStats
@@ -104,17 +111,14 @@ mainTwoFiles [file1, file2] = do
 
 getPokemons :: [String] -> IO [Pokemon]
 getPokemons [] = return []
-getPokemons (pokemon:pokemons) = do
+getPokemons (pokemon : pokemons) = do
   pokemon' <- getPokemon pokemon
   if isJust pokemon'
     then do
       let pokemon'' = fromJust pokemon'
       pokemons' <- getPokemons pokemons
       return $ pokemon'' : pokemons'
-    else
-      error $ "Couldn't find pokemon: " ++ pokemon
-  
-
+    else error $ "Couldn't find pokemon: " ++ pokemon
 
 speedTable :: [Pokemon] -> ExcelTable
 speedTable poks = table

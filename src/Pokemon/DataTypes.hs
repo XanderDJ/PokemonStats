@@ -1,10 +1,6 @@
 module Pokemon.DataTypes where
 
 import Data.Char
-import qualified Data.Map as M
-
--- | In memory store of names to dt types, when implemented should lessen the load on pokéapi
-type DTCache = M.Map String DTType
 
 -- | Wrapper around all different data types for the /dt command from showdown
 data DTType = DtPokemon Pokemon | DtItem Item | DtMove Move | DtNature Nature | DtAbility Ability
@@ -126,6 +122,7 @@ data Pokemon = Pokemon
     abilities :: [Name],
     hiddenAbilities :: Maybe Name,
     baseStats :: BaseStats,
+    pMoves :: Maybe [Move],
     weight :: Int
   }
   deriving (Show)

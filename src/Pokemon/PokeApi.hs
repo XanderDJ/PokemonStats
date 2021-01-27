@@ -1,7 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Pokemon.PokeApi where
+module Pokemon.PokeApi
+  ( getPokemon,
+    getPokemonNoMoves,
+    getItem,
+    getAbility,
+    getMove,
+    getNature,
+    getDt,
+  )
+where
 
 import Data.Aeson
   ( FromJSON (parseJSON),
@@ -12,6 +21,7 @@ import Data.Aeson
   )
 import Data.ByteString.Lazy (ByteString)
 import Data.List (intercalate)
+import qualified Data.Map as M
 import Data.Maybe (fromJust, isJust)
 import qualified Data.Text as T
 import Network.HTTP.Client
@@ -22,17 +32,20 @@ import Network.HTTP.Client
     parseRequest_,
   )
 import Network.HTTP.Client.TLS (tlsManagerSettings)
-import Network.HTTP.Types.Status ( status404 )
+import Network.HTTP.Types.Status (status404)
 import Pokemon.DataTypes
   ( Ability (..),
     BaseStat (..),
     DTType (..),
     Item (..),
     Move (Move),
-    Pokemon (Pokemon),
+    Pokemon (..),
   )
 import Pokemon.Functions (getStat)
 import Pokemon.Nature (getNature)
+
+-- | In memory store of names to dt types, when implemented should lessen the load on pokéapi
+type DTCache = M.Map String DTType
 
 -- | Manager settings for tls connections
 settings :: ManagerSettings
@@ -55,40 +68,70 @@ getDt name = do
           dt = getDts dts
       return $ Just dt
 
--- | Get a pokemon from pokéapi, TODO: Handle errors
+-- | Get a pokemon from pokéapi.
 getPokemon :: String -> IO (Maybe Pokemon)
 getPokemon name = do
   let base = pokemonBase ++ name
-  getResponse name base
+  manager <- newManager settings
+  response <- httpLbs (parseRequest_ base) manager
+  if checkFound response
+    then do
+      let mon :: Maybe Pokemon = decode (responseBody response)
+          mn :: Maybe MoveNames = decode (responseBody response)
+      if isJust mn && isJust mon
+        then do
+          let (MN names) = fromJust mn
+              mon' = fromJust mon
+          if isJust names
+            then do
+              let names' = fromJust names
+              moves <- mapM getMove names'
+              let mon'' = mon' {pMoves = sequence moves}
+              return $ Just mon''
+            else return mon
+        else return mon
+    else return Nothing
 
--- | Get an ability from pokéapi, TODO: Handle errors
+getPokemonNoMoves :: String -> IO (Maybe Pokemon)
+getPokemonNoMoves pokemon = do
+  let base = pokemonBase ++ pokemon
+  getResponse base
+
+-- | Get an ability from pokéapi.
 getAbility :: String -> IO (Maybe Ability)
 getAbility name = do
   let base = abilityBase ++ name
-  getResponse name base
+  getResponse base
 
--- | Get an item from pokéapi, TODO: Handle errors
+-- | Get an item from pokéapi.
 getItem :: String -> IO (Maybe Item)
 getItem name = do
   let base = itemBase ++ name
-  getResponse name base
+  getResponse base
 
--- | Get a move from pokéapi. TODO: Handle errors
+-- | Get a move from pokéapi.
 getMove :: String -> IO (Maybe Move)
 getMove name = do
   let base = moveBase ++ name
-  getResponse name base
+  getResponse base
 
-getResponse :: FromJSON a => String -> String -> IO (Maybe a)
-getResponse obj base = do 
+-- | Get the names of moves learned by a pokemon
+getMoveNames :: String -> IO (Maybe MoveNames)
+getMoveNames pokemon = do
+  let base = pokemonBase ++ pokemon
+  getResponse base
+
+-- | Fetch an API request from the api
+getResponse :: FromJSON a => String -> IO (Maybe a)
+getResponse base = do
   manager <- newManager settings
-  response <- httpLbs (parseRequest_ base) manager 
-  if checkFound response 
+  response <- httpLbs (parseRequest_ base) manager
+  if checkFound response
     then return $ decode (responseBody response)
-    else return $ Nothing 
+    else return Nothing
 
 checkFound :: Response ByteString -> Bool
-checkFound resp = status404 /= responseStatus resp 
+checkFound resp = status404 /= responseStatus resp
 
 -- | Api base for pokéapi, make sure this remains up to date
 apiBase :: String
@@ -170,7 +213,7 @@ instance FromJSON Pokemon where
         abilities = (map _name . filter (not . isHidden)) allAbilities
         hiddenAbility = (map _name . filter isHidden) allAbilities
         ha = if length hiddenAbility == 1 then Just $ head hiddenAbility else Nothing
-    return $ Pokemon name typing abilities ha baseStats (div weight 10)
+    return $ Pokemon name typing abilities ha baseStats Nothing (div weight 10)
 
 data EffectEntry = EffectEntry
   { language :: String,
@@ -215,8 +258,21 @@ instance FromJSON Move where
         effect'' = Effect chance effect'
     return $ Move name typing dClass power acc (getCompleteDescription effect'')
 
+newtype MoveNames = MN (Maybe [String]) deriving (Show)
+
+instance FromJSON MoveNames where
+  parseJSON (Object jsn) = do
+    moveTuple <- jsn .:? "moves"
+    if isJust moveTuple
+      then do
+        let movesTuple = fromJust moveTuple
+        moves <- mapM (.: "move") movesTuple
+        moveNames <- mapM (.: "name") moves
+        if null moves then return $ MN Nothing else return $ MN $ Just moveNames
+      else error "Couldn't find moves key in requested object."
+
 getCompleteDescription :: Effect -> Maybe String
-getCompleteDescription (Effect _ Nothing) = Nothing 
+getCompleteDescription (Effect _ Nothing) = Nothing
 getCompleteDescription (Effect Nothing (Just desc)) = Just desc
 getCompleteDescription (Effect (Just x) (Just desc)) = Just newDesc
   where
