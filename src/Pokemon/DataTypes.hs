@@ -129,3 +129,6 @@ data Pokemon = Pokemon
 
 -- | Level of a pokemon 0 - 100
 type Level = Int
+
+-- | Move types
+data MoveType = STATUS | ATTACK | HAZARD | BOOST | UTILITY | RECOVERY | OTHER deriving Show

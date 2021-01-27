@@ -5,7 +5,7 @@ import Data.Maybe
 import Data.Ord (Down (Down))
 import Pokemon.DataTypes
 import Pokemon.Nature
-import Text.Read ( readMaybe )
+import Text.Read (readMaybe)
 
 getType :: String -> Maybe Type
 getType = readMaybe
@@ -82,3 +82,148 @@ maxSpeed = maxStatAt 100 . getBaseStat "speed"
 
 maxSpeedWithScarf :: Pokemon -> Int
 maxSpeedWithScarf = (*// 1.5) . fromIntegral . maxSpeed
+
+getMoveType :: Move -> MoveType
+getMoveType (Move name tipe dClass bp' accuracy _)
+ | name `elem` hazards = HAZARD 
+ | name `elem` utility = UTILITY 
+ | name `elem` recovery = RECOVERY
+ | name `elem` statusMoves = STATUS 
+ | name `elem` boostMoves = BOOST 
+ | isJust bp' = ATTACK
+ | otherwise = OTHER
+
+hazards :: [[Char]]
+hazards = ["spikes", "toxic-spikes", "stealth-rocks", "sticky-web"]
+
+utility :: [[Char]]
+utility =
+  [ "trick-room",
+    "rain-dance",
+    "sunny-day",
+    "hail",
+    "sandstorm",
+    "reflect",
+    "light-screen",
+    "aurora-veil",
+    "psychic-terrain",
+    "misty-terrain",
+    "grassy-terrain",
+    "electric-terrain",
+    "teleport",
+    "knock-off",
+    "defog",
+    "rapid-spin",
+    "trick",
+    "switcheroo",
+    "magic-coat",
+    "protect",
+    "substitute",
+    "aromatherapy",
+    "court-change",
+    "encore",
+    "taunt",
+    "haze",
+    "heal-bell",
+    "memento",
+    "parting-shot",
+    "baton-pass",
+    "torment"
+  ]
+
+recovery :: [[Char]]
+recovery =
+  [
+    "moonlight",
+    "morning-sun",
+    "roost",
+    "milk-drink",
+    "soft-boiled",
+    "wish",
+    "shore-up",
+    "synthesis",
+    "rest",
+    "leech-life",
+    "absorb",
+    "mega-drain",
+    "giga-drain",
+    "draining-kiss",
+    "drain-punch",
+    "pain-split",
+    "leech-seed",
+    "jungle-healing",
+    "floral-healing",
+    "lunar-dance",
+    "life-dew",
+    "aqua-ring",
+    "healing-wish",
+    "heal-pulse",
+    "pollen-puff",
+    "ingrain",
+    "present",
+    "slack-off",
+    "strength-sap",
+    "oblivion-wing"
+  ]
+
+statusMoves :: [[Char]]
+statusMoves =
+  [
+    "toxic",
+    "will-o-wisp",
+    "thunder-wave",
+    "hypnosis",
+    "glare",
+    "sleep-powder",
+    "stun-spore",
+    "dark-void",
+    "yawn",
+    "confuse-ray",
+    "swagger",
+    "flatter",
+    "poison-powder",
+    "poison-gas",
+    "sing",
+    "sweet-kiss",
+    "teeter-dance"
+  ]
+
+boostMoves :: [[Char]]
+boostMoves = 
+  [
+    "acid-armor",
+    "acupressure",
+    "agility",
+    "amnesia",
+    "autotomize",
+    "belly-drum",
+    "bulk-up",
+    "calm-mind",
+    "charge",
+    "clangorous-soul",
+    "coil",
+    "cosmic-power",
+    "cotton-guard",
+    "defend-order",
+    "defense-curl",
+    "double-team",
+    "dragon-dance",
+    "focus-energy",
+    "geomancy",
+    "growth",
+    "harden",
+    "hone-claws",
+    "howl",
+    "iron-defense",
+    "nasty-plot",
+    "no-retreat",
+    "quiver-dance",
+    "rock-polish",
+    "sharpen",
+    "rototiller",
+    "shell-smash",
+    "shift-gear",
+    "swords-dance",
+    "withdraw",
+    "work-up"
+  ]
