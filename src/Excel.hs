@@ -1,13 +1,24 @@
-module Excel (ExcelTable (..), TableContent, TableMode (..), insertTable, emptyXlsx, emptySheet, nextPoint) where
+module Excel (ExcelTable (..), ExcelMap (..), TableContent, TableMode (..), insertTable, insertMap, emptyXlsx, emptySheet, nextPoint) where
 
 import Codec.Xlsx
 import Control.Lens
+import qualified Data.Map as M
 import qualified Data.Text as T
 
+-- | Table with Excel data.
+--  Mode specifies the direction of the table. Headers and contents as columns (VERTICAL) or rows (HORIZONTAL).
+--  contents contain the columns/rows of the table
 data ExcelTable = ExcelTable
   { headers :: [CellValue],
     contents :: [TableContent],
     mode :: TableMode
+  }
+
+-- | Data structure that allows for variable lengths of data in columns/row.
+-- The keys of the map get used as headers and the values as the following row
+data ExcelMap = ExcelMap
+  { eMap :: M.Map CellValue [CellValue],
+    eMMode :: TableMode
   }
 
 data TableMode = HORIZONTAL | VERTICAL
@@ -23,6 +34,13 @@ insertTable startingCorner table ws = finalWs
     ws' = insertMethod pos (headers table) ws
     nextPos = next pos
     finalWs = foldrIndexed ws' nextPos next insertMethod (contents table)
+
+insertMap :: (Int, Int) -> ExcelMap -> Worksheet -> Worksheet
+insertMap startPos mp ws = finalWs
+  where
+    mapMode = eMMode mp
+    map' = eMap mp
+    ((finalWs, mode, pos), map'') = M.mapAccumWithKey insertKeyValue (ws, mapMode, startPos) map'
 
 -- | a = start value type.
 -- b = index type.
@@ -53,6 +71,14 @@ insertRow _ [] ws = ws
 insertCol :: (Int, Int) -> [CellValue] -> Worksheet -> Worksheet
 insertCol (row, col) (cv : cvs) ws = ws & cellValueAt (row, col) ?~ cv & insertCol (row + 1, col) cvs
 insertCol _ [] ws = ws
+
+insertKeyValue :: (Worksheet, TableMode, (Int, Int)) -> CellValue -> [CellValue] -> ((Worksheet, TableMode, (Int, Int)), [CellValue])
+insertKeyValue (ws, m, pos) header contents' = ((filledWs, m, nextPos), contents')
+  where
+    wsWithHeader = ws & cellValueAt pos ?~ header
+    next = nextPoint m pos
+    nextPos = nextPoint (reverseMode m) pos
+    filledWs = insertContent m next contents' wsWithHeader
 
 emptyXlsx :: Xlsx
 emptyXlsx = def

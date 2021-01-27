@@ -131,4 +131,13 @@ data Pokemon = Pokemon
 type Level = Int
 
 -- | Move types
-data MoveType = STATUS | ATTACK | HAZARD | BOOST | UTILITY | RECOVERY | OTHER deriving Show
+data MoveType = STATUS | ATTACK | HAZARD | BOOST | UTILITY | RECOVERY | OTHER deriving Eq
+
+instance Show MoveType where
+  show STATUS = "Status"
+  show ATTACK = "Attack"
+  show HAZARD = "Hazard"
+  show BOOST = "Boost"
+  show UTILITY = "Utility"
+  show RECOVERY = "Recovery"
+  show OTHER = "Other"

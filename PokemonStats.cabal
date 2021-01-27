@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 34eaf15dd0948b1d5446bc73632fe22fbd735734e280844e46946361b5f81705
+-- hash: a9dd6f0d800de2898743dd5574bd61da584eceb9cf7910366aca3d02711dc4a9
 
 name:           PokemonStats
 version:        0.1.0.0
@@ -29,6 +29,7 @@ library
   exposed-modules:
       Excel
       Pokemon.DataTypes
+      Pokemon.Excel
       Pokemon.Functions
       Pokemon.Nature
       Pokemon.PokeApi

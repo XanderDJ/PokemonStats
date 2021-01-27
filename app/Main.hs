@@ -2,50 +2,16 @@
 
 module Main where
 
-import Codec.Xlsx
-  ( CellValue (CellDouble, CellText),
-    atSheet,
-    def,
-    fromXlsx,
-  )
+import Codec.Xlsx (atSheet, def, fromXlsx)
 import Control.Lens ((&), (?~))
-import Data.Aeson
-  ( FromJSON (parseJSON),
-    Value (Object),
-    decode,
-    (.:),
-  )
-import Data.Aeson.Internal ()
-import Data.Aeson.Parser ()
 import qualified Data.ByteString.Lazy as L
-import Data.List (sortBy)
 import Data.List.Split (splitOn, splitWhen)
 import Data.Maybe (fromJust, isJust)
-import qualified Data.Text as T
 import Data.Time.Clock.POSIX (getPOSIXTime)
-import Excel
-  ( ExcelTable (ExcelTable),
-    TableMode (HORIZONTAL),
-    emptySheet,
-    insertTable,
-  )
-import Network.HTTP.Client
-  ( Response (responseBody),
-    httpLbs,
-    newManager,
-    parseRequest,
-  )
-import Network.HTTP.Client.TLS (tlsManagerSettings)
+import Excel (emptySheet, insertTable)
 import Pokemon.DataTypes (Pokemon (pName))
-import Pokemon.Functions
-  ( getBaseStat,
-    getValue,
-    maxSpeed,
-    maxSpeedWithScarf,
-    minStatAt,
-    noInvestStatAt,
-    sortOnSpeed,
-  )
+import Pokemon.Excel (speedTable)
+import Pokemon.Functions (sortOnSpeed)
 import Pokemon.PokeApi (getPokemon)
 import System.Environment (getArgs)
 import System.IO
@@ -119,27 +85,6 @@ getPokemons (pokemon : pokemons) = do
       pokemons' <- getPokemons pokemons
       return $ pokemon'' : pokemons'
     else error $ "Couldn't find pokemon: " ++ pokemon
-
-speedTable :: [Pokemon] -> ExcelTable
-speedTable poks = table
-  where
-    headers' = [CellText "Name", CellText "Base speed", CellText "Min speed", CellText "No invest speed", CellText "Max speed", CellText "Max speed with scarf"]
-    contents' = map pokemonSpeedRow poks
-    table = ExcelTable headers' contents' HORIZONTAL
-
-pokemonSpeedRow :: Pokemon -> [CellValue]
-pokemonSpeedRow pok = row
-  where
-    speed = getBaseStat "speed" pok
-    pokName = T.pack $ pName pok
-    row =
-      [ CellText pokName,
-        (CellDouble . fromIntegral . getValue) speed,
-        (CellDouble . fromIntegral . minStatAt 100) speed,
-        (CellDouble . fromIntegral . noInvestStatAt 100) speed,
-        (CellDouble . fromIntegral . maxSpeed) pok,
-        (CellDouble . fromIntegral . maxSpeedWithScarf) pok
-      ]
 
 getTeamName :: FilePath -> String
 getTeamName = head . splitOn "." . last . splitWhen (\x -> x == '\\' || x == '/')
