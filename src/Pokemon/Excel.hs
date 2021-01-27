@@ -28,3 +28,6 @@ pokemonSpeedRow pok = row
         (CellDouble . fromIntegral . maxSpeed) pok,
         (CellDouble . fromIntegral . maxSpeedWithScarf) pok
       ]
+
+pokemonMoveMap :: Pokemon -> TableMode -> ExcelMap 
+pokemonMoveMap mon mode = undefined 

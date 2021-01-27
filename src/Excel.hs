@@ -9,15 +9,15 @@ import qualified Data.Text as T
 --  Mode specifies the direction of the table. Headers and contents as columns (VERTICAL) or rows (HORIZONTAL).
 --  contents contain the columns/rows of the table
 data ExcelTable = ExcelTable
-  { headers :: [CellValue],
-    contents :: [TableContent],
-    mode :: TableMode
+  { eTHeaders :: [CellValue],
+    eTContents :: [TableContent],
+    eTMode :: TableMode
   }
 
 -- | Data structure that allows for variable lengths of data in columns/row.
 -- The keys of the map get used as headers and the values as the following row
 data ExcelMap = ExcelMap
-  { eMap :: M.Map CellValue [CellValue],
+  { eMMap :: M.Map CellValue [CellValue],
     eMMode :: TableMode
   }
 
@@ -29,17 +29,17 @@ insertTable :: T.Text -> ExcelTable -> Worksheet -> Worksheet
 insertTable startingCorner table ws = finalWs
   where
     pos = fromSingleCellRefNoting (CellRef startingCorner)
-    insertMethod = insertContent (mode table)
-    next = nextPoint (reverseMode $ mode table)
-    ws' = insertMethod pos (headers table) ws
+    insertMethod = insertContent (eTMode table)
+    next = nextPoint (reverseMode $ eTMode table)
+    ws' = insertMethod pos (eTHeaders table) ws
     nextPos = next pos
-    finalWs = foldrIndexed ws' nextPos next insertMethod (contents table)
+    finalWs = foldrIndexed ws' nextPos next insertMethod (eTContents table)
 
 insertMap :: (Int, Int) -> ExcelMap -> Worksheet -> Worksheet
 insertMap startPos mp ws = finalWs
   where
     mapMode = eMMode mp
-    map' = eMap mp
+    map' = eMMap mp
     ((finalWs, mode, pos), map'') = M.mapAccumWithKey insertKeyValue (ws, mapMode, startPos) map'
 
 -- | a = start value type.
@@ -88,5 +88,5 @@ emptySheet = def
 
 len :: ExcelTable -> Int
 len table =
-  let rows = length (contents table)
+  let rows = length (eTContents table)
    in rows + 1
