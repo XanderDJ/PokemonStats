@@ -32,12 +32,12 @@ instance Show Item where
 
 -- | Data type representing a move, dClass is either physical or special, bp can be battle power, accuracy is only applicable to moves that have accuracy
 data Move = Move
-  { name :: Name,
-    tipe :: Typing,
-    dClass :: String,
-    bp :: Maybe Int,
-    accuracy :: Maybe Int,
-    description :: Maybe Description
+  { mName :: Name,
+    mTipe :: Type,
+    mDClass :: String,
+    mBp :: Maybe Int,
+    mAccuracy :: Maybe Int,
+    mDescription :: Maybe Description
   }
   deriving (Show)
 
@@ -131,13 +131,4 @@ data Pokemon = Pokemon
 type Level = Int
 
 -- | Move types
-data MoveType = STATUS | ATTACK | HAZARD | BOOST | UTILITY | RECOVERY | OTHER deriving Eq
-
-instance Show MoveType where
-  show STATUS = "Status"
-  show ATTACK = "Attack"
-  show HAZARD = "Hazard"
-  show BOOST = "Boost"
-  show UTILITY = "Utility"
-  show RECOVERY = "Recovery"
-  show OTHER = "Other"
+data MoveType = STATUS | ATTACK | HAZARD | BOOST | UTILITY | RECOVERY | OTHER deriving (Eq, Show)

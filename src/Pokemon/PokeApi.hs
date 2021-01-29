@@ -254,9 +254,9 @@ instance FromJSON Move where
     tipe <- typesObj .: "name"
     let effects' = filter (\(EffectEntry lang _) -> lang == "en") effects
         effect' = if (not . null) effects then (Just . eDescription . head) effects' else Nothing
-        typing = [read tipe]
+        mType = read tipe
         effect'' = Effect chance effect'
-    return $ Move name typing dClass power acc (getCompleteDescription effect'')
+    return $ Move name mType dClass power acc (getCompleteDescription effect'')
 
 newtype MoveNames = MN (Maybe [String]) deriving (Show)
 

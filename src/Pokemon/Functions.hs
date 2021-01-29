@@ -90,7 +90,7 @@ getMoveType (Move name tipe dClass bp' accuracy _)
  | name `elem` recovery = RECOVERY
  | name `elem` statusMoves = STATUS 
  | name `elem` boostMoves = BOOST 
- | isJust bp' = ATTACK
+ | dClass == "physical" || dClass == "special" = ATTACK
  | otherwise = OTHER
 
 hazards :: [[Char]]

@@ -2,15 +2,16 @@
 
 module Main where
 
-import Codec.Xlsx (atSheet, def, fromXlsx)
+import Codec.Xlsx
 import Control.Lens ((&), (?~))
 import qualified Data.ByteString.Lazy as L
 import Data.List.Split (splitOn, splitWhen)
-import Data.Maybe (fromJust, isJust)
+import Data.Maybe (fromJust, isJust, catMaybes)
 import Data.Time.Clock.POSIX (getPOSIXTime)
-import Excel (emptySheet, insertTable)
+import qualified Data.Text as T
+import Excel 
 import Pokemon.DataTypes (Pokemon (pName))
-import Pokemon.Excel (speedTable)
+import Pokemon.Excel (speedTable, pokemonMoveMap)
 import Pokemon.Functions (sortOnSpeed)
 import Pokemon.PokeApi (getPokemon)
 import System.Environment (getArgs)
@@ -45,10 +46,12 @@ mainOneFile [file] = do
   pokemons <- getPokemons pokemons'
   let pokemonSorted = sortOnSpeed pokemons
       table' = speedTable pokemonSorted
-      sheet = insertTable "A1" table' emptySheet
-      xl = def & atSheet "Speeds" ?~ sheet
+      sheet = insertTable (1, 1) table' emptySheet
+      xl = emptyXlsx & atSheet "Speeds" ?~ sheet
+      moveMaps = map (\pokemon -> (pName pokemon, pokemonMoveMap HORIZONTAL pokemon)) pokemonSorted
+      xl' = insertMoveMaps xl moveMaps
   ct <- getPOSIXTime
-  L.writeFile "speed.xlsx" $ fromXlsx ct xl
+  L.writeFile (getTeamName file ++ ".xlsx") $ fromXlsx ct xl'
   hClose handle
 
 mainTwoFiles :: [String] -> IO ()
@@ -65,8 +68,8 @@ mainTwoFiles [file1, file2] = do
       pokemonSorted2 = sortOnSpeed pokemons2
       table1 = speedTable pokemonSorted
       table2 = speedTable pokemonSorted2
-      sheet = (insertTable "I1" table2 . insertTable "A1" table1) emptySheet
-      xl = def & atSheet "Speeds" ?~ sheet
+      sheet = (insertTable (1, 8) table2 . insertTable (1, 1) table1) emptySheet
+      xl = emptyXlsx & atSheet "Speeds" ?~ sheet
   ct <- getPOSIXTime
   let team1 = getTeamName file1
       team2 = getTeamName file2
@@ -88,3 +91,13 @@ getPokemons (pokemon : pokemons) = do
 
 getTeamName :: FilePath -> String
 getTeamName = head . splitOn "." . last . splitWhen (\x -> x == '\\' || x == '/')
+
+insertMoveMaps :: Xlsx -> [(String, Maybe ExcelMap)] -> Xlsx
+insertMoveMaps xl [] = xl
+insertMoveMaps xl ((sheetName, Nothing):items) = insertMoveMaps xl items
+insertMoveMaps xl ((sheetName, Just em):items) = 
+  let
+    newSheet = insertMap (1,1) em emptySheet
+    newXl = xl & atSheet (T.pack sheetName) ?~ newSheet
+  in
+    insertMoveMaps newXl items

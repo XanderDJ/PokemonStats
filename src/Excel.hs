@@ -1,7 +1,14 @@
-module Excel (ExcelTable (..), ExcelMap (..), TableContent, TableMode (..), insertTable, insertMap, emptyXlsx, emptySheet, nextPoint) where
+module Excel (ExcelTable (..), ExcelMap (..), TableContent, TableMode (..), insertTable, insertMap, emptyXlsx, emptySheet, nextPoint, Size (..), toBoldCellValue) where
 
 import Codec.Xlsx
-import Control.Lens
+    ( cellValueAt,
+      runPropertiesBold,
+      def,
+      Worksheet,
+      Xlsx,
+      CellValue(CellRich),
+      RichTextRun(RichTextRun) )
+import Control.Lens (Field1 (_1), Field2 (_2), (%~), (&), (?~))
 import qualified Data.Map as M
 import qualified Data.Text as T
 
@@ -20,15 +27,16 @@ data ExcelMap = ExcelMap
   { eMMap :: M.Map CellValue [CellValue],
     eMMode :: TableMode
   }
+  deriving (Show)
 
-data TableMode = HORIZONTAL | VERTICAL
+data TableMode = HORIZONTAL | VERTICAL deriving (Show, Eq)
 
 type TableContent = [CellValue]
 
-insertTable :: T.Text -> ExcelTable -> Worksheet -> Worksheet
-insertTable startingCorner table ws = finalWs
+
+insertTable :: (Int, Int) -> ExcelTable -> Worksheet -> Worksheet
+insertTable pos table ws = finalWs
   where
-    pos = fromSingleCellRefNoting (CellRef startingCorner)
     insertMethod = insertContent (eTMode table)
     next = nextPoint (reverseMode $ eTMode table)
     ws' = insertMethod pos (eTHeaders table) ws
@@ -76,9 +84,9 @@ insertKeyValue :: (Worksheet, TableMode, (Int, Int)) -> CellValue -> [CellValue]
 insertKeyValue (ws, m, pos) header contents' = ((filledWs, m, nextPos), contents')
   where
     wsWithHeader = ws & cellValueAt pos ?~ header
-    next = nextPoint m pos
-    nextPos = nextPoint (reverseMode m) pos
-    filledWs = insertContent m next contents' wsWithHeader
+    next = nextPoint (reverseMode m) pos
+    nextPos = nextPoint m pos
+    filledWs = insertContent (reverseMode m) next contents' wsWithHeader
 
 emptyXlsx :: Xlsx
 emptyXlsx = def
@@ -86,7 +94,30 @@ emptyXlsx = def
 emptySheet :: Worksheet
 emptySheet = def
 
-len :: ExcelTable -> Int
-len table =
-  let rows = length (eTContents table)
-   in rows + 1
+class Size a where
+  width :: a -> Int
+  size :: a -> Int
+
+instance Size ExcelTable where
+  size table =
+    let rows = length (eTContents table)
+     in if eTMode table == HORIZONTAL then rows + 1 else width table
+  width table = if eTMode table == HORIZONTAL then length (eTHeaders table) else size table
+
+instance Size ExcelMap where
+  width map = if eMMode map == HORIZONTAL then M.size $ eMMap map else size map
+  size map = if eMMode map == HORIZONTAL then longestValLength (eMMap map) + 1 else width map
+
+longestValLength :: Foldable t => M.Map a (t b) -> Int
+longestValLength map =
+  let f foldable currentMax = if length foldable > currentMax then length foldable else currentMax
+   in M.foldr f 0 map
+
+toBoldCellValue :: String -> CellValue
+toBoldCellValue txt = 
+  let
+    runProperties = def
+    boldProperty = runProperties & runPropertiesBold ?~ True
+    richRun = RichTextRun (Just boldProperty) (T.pack txt)
+  in
+    CellRich [richRun]
