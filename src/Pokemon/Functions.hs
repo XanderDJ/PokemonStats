@@ -94,7 +94,7 @@ getMoveType (Move name tipe dClass bp' accuracy _)
  | otherwise = OTHER
 
 hazards :: [[Char]]
-hazards = ["spikes", "toxic-spikes", "stealth-rocks", "sticky-web"]
+hazards = ["spikes", "toxic-spikes", "stealth-rock", "sticky-web"]
 
 utility :: [[Char]]
 utility =

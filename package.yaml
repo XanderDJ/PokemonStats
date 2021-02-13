@@ -32,6 +32,7 @@ dependencies:
 - split
 - containers
 - http-types
+- parsec
 
 library:
   source-dirs: src

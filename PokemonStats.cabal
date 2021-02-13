@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a9dd6f0d800de2898743dd5574bd61da584eceb9cf7910366aca3d02711dc4a9
+-- hash: ae5a56db351dceb8eabac5d6e321253da36e52ddb7f31af659042461de90519d
 
 name:           PokemonStats
 version:        0.1.0.0
@@ -33,6 +33,9 @@ library
       Pokemon.Functions
       Pokemon.Nature
       Pokemon.PokeApi
+      Pokemon.Replays.API
+      Pokemon.Replays.Parsers
+      Pokemon.Replays.Types
   other-modules:
       Paths_PokemonStats
   hs-source-dirs:
@@ -46,6 +49,7 @@ library
     , http-client-tls
     , http-types
     , lens
+    , parsec
     , split
     , text
     , time
@@ -69,6 +73,7 @@ executable PokemonStats-exe
     , http-client-tls
     , http-types
     , lens
+    , parsec
     , split
     , text
     , time
@@ -93,6 +98,7 @@ test-suite PokemonStats-test
     , http-client-tls
     , http-types
     , lens
+    , parsec
     , split
     , text
     , time

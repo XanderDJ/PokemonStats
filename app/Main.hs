@@ -13,7 +13,8 @@ import Excel
 import Pokemon.DataTypes (Pokemon (pName))
 import Pokemon.Excel (speedTable, pokemonMoveMap)
 import Pokemon.Functions (sortOnSpeed)
-import Pokemon.PokeApi (getPokemon)
+import Pokemon.Replays.API
+import Pokemon.PokeApi (getPokemon, getPokemonNoMoves)
 import System.Environment (getArgs)
 import System.IO
   ( IOMode (ReadMode),
@@ -21,9 +22,13 @@ import System.IO
     hGetContents,
     openFile,
   )
+import Text.Parsec (parse)
+import Pokemon.Replays.Parsers (parseReplayMessage)
 
 main :: IO ()
-main = pokemonStats
+main = do 
+  replay <- getReplay "https://replay.pokemonshowdown.com/sports-gen8nationaldexdlcdraft-307152"
+  mapM_ (print . parse parseReplayMessage "test") $ T.splitOn "\n" (fromJust replay)
 
 pokemonStats :: IO ()
 pokemonStats = do
@@ -70,11 +75,13 @@ mainTwoFiles [file1, file2] = do
       table2 = speedTable pokemonSorted2
       sheet = (insertTable (1, 8) table2 . insertTable (1, 1) table1) emptySheet
       xl = emptyXlsx & atSheet "Speeds" ?~ sheet
+      moveMaps = map (\pokemon -> (pName pokemon, pokemonMoveMap HORIZONTAL pokemon)) pokemonSorted2
+      xl' = insertMoveMaps xl moveMaps
   ct <- getPOSIXTime
   let team1 = getTeamName file1
       team2 = getTeamName file2
       fileName = team1 ++ "vs" ++ team2 ++ ".xlsx"
-  L.writeFile fileName $ fromXlsx ct xl
+  L.writeFile fileName $ fromXlsx ct xl'
   hClose handle1
   hClose handle2
 
@@ -82,6 +89,17 @@ getPokemons :: [String] -> IO [Pokemon]
 getPokemons [] = return []
 getPokemons (pokemon : pokemons) = do
   pokemon' <- getPokemon pokemon
+  if isJust pokemon'
+    then do
+      let pokemon'' = fromJust pokemon'
+      pokemons' <- getPokemons pokemons
+      return $ pokemon'' : pokemons'
+    else error $ "Couldn't find pokemon: " ++ pokemon
+
+getPokemonsNoMoves :: [String] -> IO [Pokemon]
+getPokemonsNoMoves [] = return []
+getPokemonsNoMoves (pokemon : pokemons) = do
+  pokemon' <- getPokemonNoMoves pokemon
   if isJust pokemon'
     then do
       let pokemon'' = fromJust pokemon'

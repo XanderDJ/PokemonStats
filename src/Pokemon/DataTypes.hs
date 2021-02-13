@@ -132,3 +132,6 @@ type Level = Int
 
 -- | Move types
 data MoveType = STATUS | ATTACK | HAZARD | BOOST | UTILITY | RECOVERY | OTHER deriving (Eq, Show)
+
+-- | Status types
+data Status = BURN | PARALYZED | POISONED | SLEEP deriving (Show, Eq)
