@@ -43,7 +43,7 @@ data ReplayMessage
   | RMDmg Damage
   | RMH Heal
   | RMSHP SetHP
-  | RMStatus Status
+  | RMStatus StatusRM
   | RMCS CureStatus
   | RMCT CureTeam
   | RMBoost Boost
@@ -56,7 +56,7 @@ data ReplayMessage
   | RMCPB ClearPositiveBoost
   | RMCNB ClearNegativeBoost
   | RMCopyBoost CopyBoost
-  | RMWeather Weather
+  | RMWeather WeatherRM
   | RMFS FieldStart
   | RMFA FieldActivate
   | RMFE FieldEnd
@@ -114,7 +114,7 @@ newtype HTML = HTML Text deriving (Show, Eq)
 newtype Raw = Raw Text deriving (Show, Eq)
 
 -- | Position Player
-data Position = P1 | P2 | P3 | P4 deriving (Show, Eq)
+data Position = P1 | P2 | P3 | P4 deriving (Show, Eq, Ord)
 
 -- | P position name avatar ranking
 data Player = Pl Position (Maybe Text) (Maybe Text) (Maybe Int) deriving (Show, Eq)
@@ -176,94 +176,94 @@ newtype TimeStamp = TimeStamp Int deriving (Show, Eq)
 data Tag = Of Text | From Text | MISS | STILL | NOTARGET | ANIM Text | SILENT | MSG | UK | EAT | WISHER Text | IDENTIFY | WEAKEN | DAMAGE | PARTIALLYTRAPPED | CONSUMED deriving (Show, Eq)
 
 -- | Move pokemon movename target potential tags added
-data Move = Move Text Text Text [Tag] deriving (Show, Eq)
+data Move = Move Nick Text (Maybe Nick) [Tag] deriving (Show, Eq)
 
 -- | Switch nickname name currentHp tags
-data Switch = Switch Text Text Int [Tag] deriving (Show, Eq)
+data Switch = Switch Nick Text Health [Tag] deriving (Show, Eq)
 
 -- | Drag nickname name currentHp tags
-data Drag = Drag Text Text Int [Tag] deriving (Show, Eq)
+data Drag = Drag Nick Text Health [Tag] deriving (Show, Eq)
 
 -- | DetailsChange nickname name hp tags
-data DetailsChange = DetailsChange Text Text [Tag] deriving (Show, Eq)
+data DetailsChange = DetailsChange Nick Text [Tag] deriving (Show, Eq)
 
 -- | FormeChange nickname name tags
-data FormeChange = FormeChange Text Text [Tag] deriving (Show, Eq)
+data FormeChange = FormeChange Nick Text [Tag] deriving (Show, Eq)
 
 -- | Replace nickname name tags
-data Replace = Replace Text Text [Tag] deriving (Show, Eq)
+data Replace = Replace Nick Text [Tag] deriving (Show, Eq)
 
 -- | Swap nickname position tags
-data Swap = Swap Text Text [Tag] deriving (Show, Eq)
+data Swap = Swap Nick Text [Tag] deriving (Show, Eq)
 
 -- | Cant nickname reason (maybe move)
-data Cant = Cant Text Text (Maybe Text) deriving (Show, Eq)
+data Cant = Cant Nick Text (Maybe Text) deriving (Show, Eq)
 
 -- | Faint nickname
-newtype Faint = Faint Text deriving (Show, Eq)
+newtype Faint = Faint Nick deriving (Show, Eq)
 
 -- | Failed nickname move
-data Failed = Failed Text (Maybe Text) deriving (Show, Eq)
+data Failed = Failed Nick (Maybe Text) deriving (Show, Eq)
 
 -- | Block nickname effect move attacker TODO: check if this uses tags instead
-data Block = Block Text Text Text Text [Tag] deriving (Show, Eq)
+data Block = Block Nick Text Text Text [Tag] deriving (Show, Eq)
 
 -- | NoTarget nickname
 newtype NoTarget = NoTarget Text deriving (Show, Eq)
 
 -- | Miss source (maybe action)
-data Miss = Miss Text (Maybe Text) deriving (Show, Eq)
+data Miss = Miss Nick (Maybe Text) deriving (Show, Eq)
 
 -- | Damage nickname currentHp tags
-data Damage = Damage Text Int [Tag] deriving (Show, Eq)
+data Damage = Damage Nick Health [Tag] deriving (Show, Eq)
 
 -- | Heal nickname currentHp tags
-data Heal = Heal Text Int [Tag] deriving (Show, Eq)
+data Heal = Heal Nick Health [Tag] deriving (Show, Eq)
 
 -- | SetHP nickname hp
-data SetHP = SetHP Text Int [Tag] deriving (Show, Eq)
+data SetHP = SetHP Nick Health [Tag] deriving (Show, Eq)
 
 -- | Status nickname (status abbreviation)
-data Status = Status Text Text deriving (Show, Eq)
+data StatusRM = Status Nick Text deriving (Show, Eq)
 
 -- | CureStatus nickname status
-data CureStatus = CureStatus Text Text deriving (Show, Eq)
+data CureStatus = CureStatus Nick Text deriving (Show, Eq)
 
 -- | CureTeam nickname
-newtype CureTeam = CureTeam Text deriving (Show, Eq)
+newtype CureTeam = CureTeam Nick deriving (Show, Eq)
 
 -- | Boost nickname stat amount
-data Boost = Boost Text Text Int deriving (Show, Eq)
+data Boost = Boost Nick Text Int deriving (Show, Eq)
 
 -- | Unboost nickname stat amount
-data Unboost = Unboost Text Text Int deriving (Show, Eq)
+data Unboost = Unboost Nick Text Int deriving (Show, Eq)
 
 -- | SetBoost nickname stat amount
-data SetBoost = SetBoost Text Text Int deriving (Show, Eq)
+data SetBoost = SetBoost Nick Text Int deriving (Show, Eq)
 
 -- | SwapBoost source target tags
-data SwapBoost = SwapBoost Text Text [Text] [Tag] deriving (Show, Eq)
+data SwapBoost = SwapBoost Nick Nick [Text] [Tag] deriving (Show, Eq)
 
 -- | InvertBoost nickname tags
-data InvertBoost = InvertBoost Text [Tag] deriving (Show, Eq)
+data InvertBoost = InvertBoost Nick [Tag] deriving (Show, Eq)
 
 -- | ClearBoost nickname
-newtype ClearBoost = ClearBoost Text  deriving (Show, Eq)
+newtype ClearBoost = ClearBoost Nick  deriving (Show, Eq)
 
 -- | ClearAllBoosts
 data ClearAllBoosts = CLEARALLBOOSTS deriving (Show, Eq)
 
 -- | ClearPositiveBoost target source effect
-data ClearPositiveBoost = ClearPositiveBoost Text Text Text deriving (Show, Eq)
+data ClearPositiveBoost = ClearPositiveBoost Nick Nick Text deriving (Show, Eq)
 
 -- | ClearNegativeBoost target source effect
-newtype ClearNegativeBoost = ClearNegativeBoost Text deriving (Show, Eq)
+newtype ClearNegativeBoost = ClearNegativeBoost Nick deriving (Show, Eq)
 
 -- | CopyBoost Source Target tags
-data CopyBoost = CopyBoost Text Text [Tag] deriving (Show, Eq)
+data CopyBoost = CopyBoost Nick Nick [Tag] deriving (Show, Eq)
 
 -- | Weather effect tags, Upkeep means weather was already in effect
-data Weather = Weather Text [Tag] deriving (Show, Eq)
+data WeatherRM = Weather Text [Tag] deriving (Show, Eq)
 
 -- | FieldStart condition tags
 data FieldStart = FieldStart Text [Tag] deriving (Show, Eq)
@@ -275,61 +275,61 @@ newtype FieldActivate = FieldActivate Text deriving (Show, Eq)
 data FieldEnd = FieldEnd Text [Tag] deriving (Show, Eq)
 
 -- | SideStart side condition tags
-data SideStart = SideStart Text Text deriving (Show, Eq)
+data SideStart = SideStart Nick Text deriving (Show, Eq)
 
 -- | SideEnd side condition tags
-data SideEnd = SideEnd Text Text deriving (Show, Eq)
+data SideEnd = SideEnd Nick Text deriving (Show, Eq)
 
 -- | VolatileStart nickname effect tags. Used for volatile status
-data VolatileStart = VolatileStart Text Text deriving (Show, Eq)
+data VolatileStart = VolatileStart Nick Text deriving (Show, Eq)
 
 -- | VolatileEnd nickname effect tags. Used for volatile status (happens when the effect depends on the pokemon being there)
-data VolatileEnd = VolatileEnd Text Text deriving (Show, Eq)
+data VolatileEnd = VolatileEnd Nick Text deriving (Show, Eq)
 
 -- | Crit nickname
-newtype Crit = Crit Text deriving (Show, Eq)
+newtype Crit = Crit Nick deriving (Show, Eq)
 
 -- | SuperEffective nickname
-newtype SuperEffective = SuperEffective Text deriving (Show, Eq)
+newtype SuperEffective = SuperEffective Nick deriving (Show, Eq)
 
 -- | Resisted nickname
-newtype Resisted = Resisted Text deriving (Show, Eq)
+newtype Resisted = Resisted Nick deriving (Show, Eq)
 
 -- | Immune nickname
-newtype Immune = Immune Text deriving (Show, Eq)
+newtype Immune = Immune Nick deriving (Show, Eq)
 
 -- | Item pokemon item tags
-data Item = Item Text Text [Tag] deriving (Show, Eq)
+data Item = Item Nick Text [Tag] deriving (Show, Eq)
 
 -- | EndItem pokemon item tags
-data EndItem = EndItem Text Text [Tag] deriving (Show, Eq)
+data EndItem = EndItem Nick Text [Tag] deriving (Show, Eq)
 
 -- | Ability pokemon ability tags
-data Ability = Ability Text Text [Tag] deriving (Show, Eq)
+data Ability = Ability Nick Text [Tag] deriving (Show, Eq)
 
 -- | Endability Pokemon tags
-data EndAbility = EndAbility Text [Tag] deriving (Show, Eq)
+data EndAbility = EndAbility Nick [Tag] deriving (Show, Eq)
 
 -- | Transform pokemon newForm
-data Transform = Transform Text Text [Tag] deriving (Show, Eq)
+data Transform = Transform Nick Nick [Tag] deriving (Show, Eq)
 
 -- | Mega pokemon megaStone
-data Mega = Mega Text Text deriving (Show, Eq)
+data Mega = Mega Nick Text deriving (Show, Eq)
 
 -- | Primal pokemon
-newtype Primal = Primal Text deriving (Show, Eq)
+newtype Primal = Primal Nick deriving (Show, Eq)
 
 -- | Burst pokemon species item
-data Burst = Burst Text Text Text deriving (Show, Eq)
+data Burst = Burst Nick Text Text deriving (Show, Eq)
 
 -- | ZMove pokemon tags
-data ZMove = ZMove Text [Tag] deriving (Show, Eq)
+data ZMove = ZMove Nick [Tag] deriving (Show, Eq)
 
 -- | ZBroken pokemon
-newtype ZBroken = ZBroken Text deriving (Show, Eq)
+newtype ZBroken = ZBroken Nick deriving (Show, Eq)
 
 -- | Activate effect tags
-data Activate = Activate Text Text [Tag] deriving (Show, Eq)
+data Activate = Activate Nick Text [Tag] deriving (Show, Eq)
 
 newtype Hint = Hint Text deriving (Show, Eq)
 
@@ -340,10 +340,10 @@ newtype Message = Message Text deriving (Show, Eq)
 data Combine = COMBINE deriving (Show, Eq)
 
 -- | Waiting target source
-data Waiting = Waiting Text Text deriving (Show, Eq)
+data Waiting = Waiting Nick Nick deriving (Show, Eq)
 
 -- | Prepare attacker move (maybe defender)
-data Prepare = Prepare Text Text (Maybe Text) deriving (Show, Eq)
+data Prepare = Prepare Nick Text (Maybe Nick) deriving (Show, Eq)
 
 -- | MustRecharge pokemon
 newtype MustRecharge = MustRecharge Text deriving (Show, Eq)
@@ -351,15 +351,19 @@ newtype MustRecharge = MustRecharge Text deriving (Show, Eq)
 data Nothing = NOTHING deriving (Show, Eq)
 
 -- | Hitcount pokemon count
-data HitCount = HitCount Text Int deriving (Show, Eq)
+data HitCount = HitCount Nick Int deriving (Show, Eq)
 
 -- | SingleMove pokemon move
-data SingleMove = SingleMove Text Text deriving (Show, Eq)
+data SingleMove = SingleMove Nick Text deriving (Show, Eq)
 
 -- | SingleTurn pokemon move
-data SingleTurn = SingleTurn Text Text deriving (Show, Eq)
+data SingleTurn = SingleTurn Nick Text deriving (Show, Eq)
 
 -- | Anim Nick move nick
-data Anim = Anim Text Text Text deriving (Show, Eq) 
+data Anim = Anim Nick Text Nick deriving (Show, Eq) 
 
 newtype Unsupported = Unsupported Text deriving (Show, Eq)
+
+type Nick = (Position, Text)
+
+type Health = (Int, Int, Text)

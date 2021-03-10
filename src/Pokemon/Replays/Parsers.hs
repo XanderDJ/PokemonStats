@@ -72,14 +72,14 @@ parseTag =
            <|> parseIdentify
        )
 
-parseConsumed :: Parser Tag 
-parseConsumed = "consumed]" $>> CONSUMED 
+parseConsumed :: Parser Tag
+parseConsumed = "consumed]" $>> CONSUMED
 
 parsePartiallyTrapped :: Parser Tag
-parsePartiallyTrapped = "partiallytrapped]" $>> PARTIALLYTRAPPED 
+parsePartiallyTrapped = "partiallytrapped]" $>> PARTIALLYTRAPPED
 
-parseDmg :: Parser Tag 
-parseDmg = "damage]" $>> DAMAGE 
+parseDmg :: Parser Tag
+parseDmg = "damage]" $>> DAMAGE
 
 parseFrom :: Parser Tag
 parseFrom = string "from]" *> spaces *> (string "item:" <|> string "ability:" <|> string "move:" <|> lookAhead (many (noneOf "|"))) *> spaces *> (From <$> parseTillSep)
@@ -121,29 +121,49 @@ parseWisher :: Parser Tag
 parseWisher = "wisher]" *>> spaces *> (WISHER <$> parseTillSep)
 
 parseIdentify :: Parser Tag
-parseIdentify = "identify]" $>> IDENTIFY 
+parseIdentify = "identify]" $>> IDENTIFY
 
 parseWeaken :: Parser Tag
-parseWeaken = "weaken]" $>> WEAKEN 
+parseWeaken = "weaken]" $>> WEAKEN
 
 parseTags :: Parser [Tag]
 parseTags = parseTag `sepBy` char '|'
 
-parseSwitchIn :: (T.Text -> T.Text -> Int -> [Tag] -> a) -> String -> Parser a
-parseSwitchIn dataConstructor pre = pre *>> dataConstructor <$> parseNick <*|> parseTillSep <*|> parseHp <*|*> parseTags
+parseSwitchIn :: (Nick -> T.Text -> Health -> [Tag] -> a) -> String -> Parser a
+parseSwitchIn dataConstructor pre = pre *>> dataConstructor <$> parseNick <*|> parseDetails <*|> parseHp <*|*> parseTags
 
-parseNick :: Parser T.Text
-parseNick = parsePosition *> char ':' *> spaces *> parseTillSep
+parseNick :: Parser Nick
+parseNick = do
+  pos <- parsePosition
+  char ':' *> spaces
+  nick <- parseTillSep
+  return (pos, nick)
 
-parseMaybeNick :: Parser (Maybe T.Text)
+parseMaybeNick :: Parser (Maybe Nick)
 parseMaybeNick = do
   txt <- lookAhead $ many $ char 'p'
   if null txt then pure Nothing else Just <$> parseNick
 
-parseHp :: Parser Int
-parseHp = read <$> many digit <* parseTillSep
+parseHp :: Parser Health
+parseHp = parseHpNonFaint <||> parseHpFaint
 
-parseChange :: (T.Text -> T.Text -> [Tag] -> a) -> String -> Parser a
+parseHpNonFaint :: Parser Health
+parseHpNonFaint = do
+  currentHp <- read <$> many digit
+  char '/'
+  totalHp <- read <$> many digit
+  spaces
+  status <- parseTillSep
+  return (currentHp, totalHp, status)
+
+parseHpFaint :: Parser Health
+parseHpFaint = do
+  currentHp <- read <$> many digit
+  spaces
+  status <- parseTillSep
+  return (currentHp, 0, status)
+
+parseChange :: (Nick -> T.Text -> [Tag] -> a) -> String -> Parser a
 parseChange dataConstructor pre = pre *>> dataConstructor <$> parseNick <*|> parseDetails <*|*> parseTags
 
 -- | Parse with just 1 separator in between
@@ -170,7 +190,7 @@ infixl 4 <*|>, <*|*>, <*|+>
 
 infixl 3 *>>, $>>
 
-parseBoostType :: (T.Text -> T.Text -> Int -> a) -> String -> Parser a
+parseBoostType :: (Nick -> T.Text -> Int -> a) -> String -> Parser a
 parseBoostType constructor pre = string pre *> (constructor <$> parseNick <*|> parseTillSep <*|> parseNumber)
 
 parseDash :: Parser [Char]
@@ -340,7 +360,7 @@ parseFieldStart' = "fieldstart|" *>> FieldStart <$> parseTillSep <*|*> parseTags
 
 parseFieldStart = RMFS <$> parseFieldStart'
 
-parseFieldActivate' :: Parser FieldActivate 
+parseFieldActivate' :: Parser FieldActivate
 parseFieldActivate' = "fieldactivate|" *>> FieldActivate <$> parseTillSep
 
 parseFieldActivate = RMFA <$> parseFieldActivate'
@@ -480,11 +500,11 @@ parseMove' = do
   if T.null lookahead
     then do
       parseSep0
-      Move nick move lookahead <$> parseTags
+      Move nick move Nothing <$> parseTags
     else do
       target <- parseNick
       parseSep0
-      Move nick move target <$> parseTags
+      Move nick move (Just target) <$> parseTags
 
 parseMove :: Parser ReplayMessage
 parseMove = RMMove <$> parseMove'
@@ -559,7 +579,7 @@ parseRaw' = "raw|" *>> Raw <$> parseTillSep
 parseRaw = RMRaw <$> parseRaw'
 
 parseReplace' :: Parser Replace
-parseReplace' = "replace|" *>> Replace <$> parseNick <*|> parseDetails <*|*> parseTags 
+parseReplace' = "replace|" *>> Replace <$> parseNick <*|> parseDetails <*|*> parseTags
 
 parseReplace :: Parser ReplayMessage
 parseReplace = RMReplace <$> parseReplace'
@@ -612,7 +632,7 @@ parseStart' = "start" $>> START
 parseStart :: Parser ReplayMessage
 parseStart = RMS <$> parseStart'
 
-parseStatus' :: Parser Status
+parseStatus' :: Parser StatusRM
 parseStatus' = "status|" *>> Status <$> parseNick <*|> parseTillSep
 
 parseStatus :: Parser ReplayMessage
@@ -704,9 +724,10 @@ parseVolatileEnd = RMVE <$> parseVolatileEnd'
 parseWaiting' :: Parser Waiting
 parseWaiting' = "waiting|" *>> Waiting <$> parseNick <*|> parseNick
 
+parseWaiting :: Parser ReplayMessage
 parseWaiting = RMWaiting <$> parseWaiting'
 
-parseWeather' :: Parser Weather
+parseWeather' :: Parser WeatherRM
 parseWeather' = "weather|" *>> Weather <$> parseTillSep <*|*> parseTags
 
 parseWeather = RMWeather <$> parseWeather'
@@ -733,10 +754,10 @@ parseDelimiter' = eof $> DELIMITER
 parseDelimiter :: Parser ReplayMessage
 parseDelimiter = RMD <$> parseDelimiter'
 
-parseUnsupported' :: Parser Unsupported 
-parseUnsupported' = Unsupported . T.pack <$> many anyChar 
+parseUnsupported' :: Parser Unsupported
+parseUnsupported' = Unsupported . T.pack <$> many anyChar
 
-parseUnsupported :: Parser ReplayMessage 
+parseUnsupported :: Parser ReplayMessage
 parseUnsupported = RMUnsupported <$> parseUnsupported'
 
 -- BIG PARSE FUNCTION

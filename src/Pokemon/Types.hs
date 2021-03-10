@@ -1,4 +1,4 @@
-module Pokemon.DataTypes where
+module Pokemon.Types where
 
 import Data.Char
 
@@ -135,3 +135,12 @@ data MoveType = STATUS | ATTACK | HAZARD | BOOST | UTILITY | RECOVERY | OTHER de
 
 -- | Status types
 data Status = BURN | PARALYZED | POISONED | SLEEP deriving (Show, Eq)
+
+-- | Weather
+data Weather = SANDSTORM | HAIL | RAIN | SUN | HEAVYRAIN | HEAVYSUN deriving Show
+
+-- | Terrain
+data Terrain = ELECTRIC_T | PSYCHIC_T | MISTY | GRASSY deriving Show
+
+-- | Hazards
+data Hazards = SPIKES | TOXIC_SPIKES | STEALTH_ROCKS | STICKY_WEBS deriving Show

@@ -1,6 +1,6 @@
 module Pokemon.Nature where
 
-import Pokemon.DataTypes
+import Pokemon.Types
     ( Stat(SPATK, NEUTRAL, ATK, DEF, SPEED, SPDEF), Nature(..) )
 
 hardy :: Nature

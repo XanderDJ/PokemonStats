@@ -4,17 +4,21 @@ module Main where
 
 import Codec.Xlsx
 import Control.Lens ((&), (?~))
+import Control.Monad.State
 import qualified Data.ByteString.Lazy as L
+import Data.Default
 import Data.List.Split (splitOn, splitWhen)
-import Data.Maybe (fromJust, isJust, catMaybes)
-import Data.Time.Clock.POSIX (getPOSIXTime)
+import Data.Maybe (catMaybes, fromJust, isJust)
 import qualified Data.Text as T
-import Excel 
-import Pokemon.DataTypes (Pokemon (pName))
-import Pokemon.Excel (speedTable, pokemonMoveMap)
+import Data.Time.Clock.POSIX (getPOSIXTime)
+import Excel
+import Pokemon.Excel (pokemonMoveMap, speedTable)
 import Pokemon.Functions (sortOnSpeed)
-import Pokemon.Replays.API
 import Pokemon.PokeApi (getPokemon, getPokemonNoMoves)
+import Pokemon.Replays.API
+import Pokemon.Replays.Parsers (parseReplayMessage)
+import Pokemon.Stats.Stats
+import Pokemon.Types (Pokemon (pName))
 import System.Environment (getArgs)
 import System.IO
   ( IOMode (ReadMode),
@@ -23,12 +27,13 @@ import System.IO
     openFile,
   )
 import Text.Parsec (parse)
-import Pokemon.Replays.Parsers (parseReplayMessage)
+import Text.Pretty.Simple
 
 main :: IO ()
-main = do 
-  replay <- getReplay "https://replay.pokemonshowdown.com/sports-gen8nationaldexdlcdraft-307152"
-  mapM_ (print . parse parseReplayMessage "test") $ T.splitOn "\n" (fromJust replay)
+main = do
+  (Just replay) <- getReplay "https://replay.pokemonshowdown.com/gen8unratedrandombattle-1296331007"
+  let (a, s) = runState (getStats replay) def
+  pPrint s
 
 pokemonStats :: IO ()
 pokemonStats = do
@@ -112,10 +117,8 @@ getTeamName = head . splitOn "." . last . splitWhen (\x -> x == '\\' || x == '/'
 
 insertMoveMaps :: Xlsx -> [(String, Maybe ExcelMap)] -> Xlsx
 insertMoveMaps xl [] = xl
-insertMoveMaps xl ((sheetName, Nothing):items) = insertMoveMaps xl items
-insertMoveMaps xl ((sheetName, Just em):items) = 
-  let
-    newSheet = insertMap (1,1) em emptySheet
-    newXl = xl & atSheet (T.pack sheetName) ?~ newSheet
-  in
-    insertMoveMaps newXl items
+insertMoveMaps xl ((sheetName, Nothing) : items) = insertMoveMaps xl items
+insertMoveMaps xl ((sheetName, Just em) : items) =
+  let newSheet = insertMap (1, 1) em emptySheet
+      newXl = xl & atSheet (T.pack sheetName) ?~ newSheet
+   in insertMoveMaps newXl items

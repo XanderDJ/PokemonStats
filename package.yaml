@@ -33,6 +33,9 @@ dependencies:
 - containers
 - http-types
 - parsec
+- mtl
+- data-default
+- pretty-simple
 
 library:
   source-dirs: src

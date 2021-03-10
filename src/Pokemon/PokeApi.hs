@@ -33,7 +33,7 @@ import Network.HTTP.Client
   )
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Network.HTTP.Types.Status (status404)
-import Pokemon.DataTypes
+import Pokemon.Types
   ( Ability (..),
     BaseStat (..),
     DTType (..),

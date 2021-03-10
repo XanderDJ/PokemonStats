@@ -3,7 +3,7 @@ module Pokemon.Functions where
 import Data.List (sortBy)
 import Data.Maybe
 import Data.Ord (Down (Down))
-import Pokemon.DataTypes
+import Pokemon.Types
 import Pokemon.Nature
 import Text.Read (readMaybe)
 

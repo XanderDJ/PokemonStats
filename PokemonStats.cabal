@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ae5a56db351dceb8eabac5d6e321253da36e52ddb7f31af659042461de90519d
+-- hash: 271ecd3b041a24e467fde4aab296a26de6b707cb1d9fb8765f4dedc98bbabd16
 
 name:           PokemonStats
 version:        0.1.0.0
@@ -28,7 +28,6 @@ source-repository head
 library
   exposed-modules:
       Excel
-      Pokemon.DataTypes
       Pokemon.Excel
       Pokemon.Functions
       Pokemon.Nature
@@ -36,6 +35,10 @@ library
       Pokemon.Replays.API
       Pokemon.Replays.Parsers
       Pokemon.Replays.Types
+      Pokemon.Stats.Functions
+      Pokemon.Stats.Stats
+      Pokemon.Stats.Types
+      Pokemon.Types
   other-modules:
       Paths_PokemonStats
   hs-source-dirs:
@@ -45,11 +48,14 @@ library
     , base >=4.7 && <5
     , bytestring
     , containers
+    , data-default
     , http-client
     , http-client-tls
     , http-types
     , lens
+    , mtl
     , parsec
+    , pretty-simple
     , split
     , text
     , time
@@ -69,11 +75,14 @@ executable PokemonStats-exe
     , base >=4.7 && <5
     , bytestring
     , containers
+    , data-default
     , http-client
     , http-client-tls
     , http-types
     , lens
+    , mtl
     , parsec
+    , pretty-simple
     , split
     , text
     , time
@@ -94,11 +103,14 @@ test-suite PokemonStats-test
     , base >=4.7 && <5
     , bytestring
     , containers
+    , data-default
     , http-client
     , http-client-tls
     , http-types
     , lens
+    , mtl
     , parsec
+    , pretty-simple
     , split
     , text
     , time

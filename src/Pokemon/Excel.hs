@@ -10,7 +10,7 @@ import Control.Lens
 import qualified Data.Map as M
 import qualified Data.Text as T
 import Excel
-import Pokemon.DataTypes
+import Pokemon.Types
     ( Move(mName, mTipe), MoveType(ATTACK), Pokemon(pName, pMoves) )
 import Pokemon.Functions
     ( getBaseStat,
